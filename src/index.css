@@ -94,12 +94,12 @@
 }
 
 @keyframes blink-critical {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%, 100% { opacity: 1; background-color: hsl(var(--destructive) / 0.15); }
+  50% { opacity: 0.6; background-color: hsl(var(--destructive) / 0.05); }
 }
 
 .animate-blink {
-  animation: blink-critical 1s ease-in-out infinite;
+  animation: blink-critical 0.8s ease-in-out infinite;
 }
 
 @keyframes pulse-live {
