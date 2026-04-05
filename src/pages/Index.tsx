@@ -1,16 +1,101 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import { useSensorData } from '@/hooks/useSensorData';
+import TopBar from '@/components/TopBar';
+import SensorCard from '@/components/SensorCard';
+import TemperatureChart from '@/components/TemperatureChart';
+import AlertsPanel from '@/components/AlertsPanel';
+import ThresholdModal from '@/components/ThresholdModal';
+import ExportModal from '@/components/ExportModal';
+import { useToast } from '@/hooks/use-toast';
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const [refreshInterval, setRefreshInterval] = useState(10);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const { toast } = useToast();
+
+  const {
+    sensors,
+    alerts,
+    wifi,
+    lastUpdated,
+    selectedSensor,
+    setSelectedSensor,
+    soundEnabled,
+    setSoundEnabled,
+    thresholds,
+    updateThreshold,
+    refresh,
+  } = useSensorData(refreshInterval);
+
+  const handleReboot = () => {
+    toast({ title: '🔄 Rebooting...', description: 'ระบบกำลัง reboot (demo mode)' });
+    refresh();
+  };
+
+  const handleSaveThresholds = (newThresholds: Record<string, number>) => {
+    Object.entries(newThresholds).forEach(([id, val]) => updateThreshold(id, val));
+    toast({ title: '✅ บันทึกเรียบร้อย', description: 'Threshold settings updated' });
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 max-w-[1600px] mx-auto">
+      <TopBar
+        lastUpdated={lastUpdated}
+        wifi={wifi}
+        soundEnabled={soundEnabled}
+        onToggleSound={() => setSoundEnabled(!soundEnabled)}
+        refreshInterval={refreshInterval}
+        onIntervalChange={setRefreshInterval}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenExport={() => setExportOpen(true)}
+        onReboot={handleReboot}
+      />
+
+      {/* Sensor Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        {sensors.map(s => (
+          <SensorCard
+            key={s.id}
+            sensor={s}
+            isSelected={selectedSensor === s.id}
+            onClick={() => setSelectedSensor(selectedSensor === s.id ? null : s.id)}
+          />
+        ))}
+      </div>
+
+      {/* Chart + Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <TemperatureChart
+            sensors={sensors}
+            selectedSensor={selectedSensor}
+            onSelectSensor={setSelectedSensor}
+          />
+        </div>
+        <div>
+          <AlertsPanel
+            alerts={alerts}
+            soundEnabled={soundEnabled}
+            onToggleSound={() => setSoundEnabled(!soundEnabled)}
+          />
+        </div>
+      </div>
+
+      {/* Modals */}
+      <ThresholdModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        thresholds={thresholds}
+        onSave={handleSaveThresholds}
+      />
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        sensors={sensors}
+      />
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
