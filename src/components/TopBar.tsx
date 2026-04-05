@@ -86,10 +86,9 @@ export default function TopBar({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="5">5 วินาที</SelectItem>
-            <SelectItem value="10">10 วินาที</SelectItem>
-            <SelectItem value="30">30 วินาที</SelectItem>
             <SelectItem value="60">1 นาที</SelectItem>
+            <SelectItem value="300">5 นาที</SelectItem>
+            <SelectItem value="900">15 นาที</SelectItem>
           </SelectContent>
         </Select>
 

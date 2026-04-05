@@ -9,7 +9,7 @@ import ExportModal from '@/components/ExportModal';
 import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
-  const [refreshInterval, setRefreshInterval] = useState(10);
+  const [refreshInterval, setRefreshInterval] = useState(60);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const { toast } = useToast();

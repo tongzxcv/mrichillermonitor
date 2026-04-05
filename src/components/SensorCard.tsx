@@ -51,7 +51,7 @@ export default function SensorCard({ sensor, isSelected, onClick }: SensorCardPr
       onClick={onClick}
       className={`cursor-pointer p-4 transition-all hover:shadow-md ${
         isSelected ? 'ring-2 ring-primary shadow-lg' : ''
-      } ${sensor.status === 'critical' ? 'border-destructive/50' : ''}`}
+      } ${sensor.status === 'critical' ? 'border-destructive/50 animate-blink' : ''}`}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
