@@ -34,16 +34,16 @@ export interface WifiBoard {
 }
 
 export const SENSOR_CONFIGS: SensorConfig[] = [
-  { id: 's1', name: 'Supply MRI', color: '#29b6f6', threshold: 25 },
-  { id: 's2', name: 'Return MRI', color: '#00c897', threshold: 28 },
-  { id: 's3', name: 'Exchange Supply', color: '#ff7043', threshold: 26 },
-  { id: 's4', name: 'Exchange Return', color: '#ab47bc', threshold: 22 },
-  { id: 's5', name: 'Supply Main Chiller', color: '#ffa726', threshold: 30 },
-  { id: 's6', name: 'Return Main Chiller', color: '#ef5350', threshold: 45 },
-  { id: 's7', name: 'Supply OR', color: '#26c6da', threshold: 35 },
-  { id: 's8', name: 'Return OR', color: '#66bb6a', threshold: 20 },
-  { id: 's9', name: 'Supply Header', color: '#5c6bc0', threshold: 24 },
-  { id: 's10', name: 'Return Header', color: '#ec407a', threshold: 18 },
+  { id: 's1', name: 'Supply MRI', color: '#29b6f6', threshold: 12 },
+  { id: 's2', name: 'Return MRI', color: '#00c897', threshold: 14 },
+  { id: 's3', name: 'Exchange Supply', color: '#ff7043', threshold: 12 },
+  { id: 's4', name: 'Exchange Return', color: '#ab47bc', threshold: 14 },
+  { id: 's5', name: 'Supply Main Chiller', color: '#ffa726', threshold: 12 },
+  { id: 's6', name: 'Return Main Chiller', color: '#ef5350', threshold: 14 },
+  { id: 's7', name: 'Supply OR', color: '#26c6da', threshold: 10 },
+  { id: 's8', name: 'Return OR', color: '#66bb6a', threshold: 14 },
+  { id: 's9', name: 'Supply Header', color: '#5c6bc0', threshold: 10 },
+  { id: 's10', name: 'Return Header', color: '#ec407a', threshold: 14 },
 ];
 
 const SENSOR_BASES = [18, 22, 24, 23, 25, 38, 30, 21, 25, 19];
