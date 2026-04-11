@@ -36,7 +36,8 @@ export default function AlertsPanel({ alerts, soundEnabled, onToggleSound }: Ale
         <p className="text-sm text-muted-foreground text-center py-6">✅ No alerts — all sensors normal</p>
       ) : (
         <div className="overflow-auto max-h-64">
-          <Table>
+          {/* Table for md+ */}
+          <Table className="hidden md:table">
             <TableHeader>
               <TableRow>
                 <TableHead className="text-xs">Time</TableHead>
@@ -68,6 +69,26 @@ export default function AlertsPanel({ alerts, soundEnabled, onToggleSound }: Ale
               ))}
             </TableBody>
           </Table>
+          {/* Card list for mobile */}
+          <div className="md:hidden space-y-2">
+            {displayed.map(a => (
+              <div
+                key={a.id}
+                className={`rounded-md border p-2 text-[11px] space-y-0.5 ${a.severity === 'critical' ? 'animate-blink bg-destructive/10 border-destructive/30' : 'border-border'}`}
+              >
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">{a.sensor}</span>
+                  <Badge variant={a.severity === 'critical' ? 'destructive' : 'secondary'} className="text-[9px] px-1 py-0">
+                    {a.severity}
+                  </Badge>
+                </div>
+                <div className="text-muted-foreground flex gap-2">
+                  <span>{a.time}</span>
+                  <span>{a.value.toFixed(1)}°C / {a.threshold}°C</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </Card>

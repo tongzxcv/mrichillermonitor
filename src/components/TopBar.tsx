@@ -52,64 +52,66 @@ export default function TopBar({
   onReboot,
 }: TopBarProps) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-card p-4 shadow-sm">
-      {/* Left */}
-      <div className="flex items-center gap-3">
-        <span className="text-2xl">❄️</span>
-        <div>
-          <h1 className="text-lg font-bold leading-tight">MRI Chiller Monitor</h1>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-pulse-live absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-            </span>
-            Live — {lastUpdated.toLocaleTimeString('th-TH')}
+    <header className="flex flex-col gap-3 rounded-lg bg-card p-3 md:p-4 shadow-sm">
+      {/* Row 1: Title + Controls */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xl md:text-2xl">❄️</span>
+          <div className="min-w-0">
+            <h1 className="text-sm md:text-lg font-bold leading-tight truncate">MRI Chiller Monitor</h1>
+            <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-muted-foreground">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-pulse-live absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+              </span>
+              <span className="truncate">Live — {lastUpdated.toLocaleTimeString('th-TH')}</span>
+            </div>
           </div>
+        </div>
+
+        {/* Controls - icon buttons wrap naturally */}
+        <div className="flex items-center gap-1 md:gap-2 flex-wrap justify-end">
+          <Select value={String(refreshInterval)} onValueChange={v => onIntervalChange(Number(v))}>
+            <SelectTrigger className="h-7 md:h-8 w-20 md:w-28 text-[10px] md:text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="60">1 นาที</SelectItem>
+              <SelectItem value="300">5 นาที</SelectItem>
+              <SelectItem value="900">15 นาที</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8" onClick={onToggleSound}>
+            {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8" onClick={onOpenSettings}>
+            <Settings className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8" onClick={onOpenExport}>
+            <Download className="h-3.5 w-3.5" />
+          </Button>
+          <Link to="/history">
+            <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8">
+              <History className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+          <Button variant="outline" size="sm" className="h-7 md:h-8 text-[10px] md:text-xs gap-1" onClick={onReboot}>
+            <RefreshCw className="h-3 w-3" /> <span className="hidden sm:inline">Reboot</span>
+          </Button>
         </div>
       </div>
 
-      {/* WiFi */}
-      <div className="flex items-center gap-3">
+      {/* Row 2: WiFi - scrollable on mobile */}
+      <div className="flex items-center gap-3 overflow-x-auto pb-1 -mb-1 scrollbar-thin">
         {wifi.map(b => (
-          <div key={b.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Wifi className="h-3.5 w-3.5" />
+          <div key={b.name} className="flex items-center gap-1 text-[10px] md:text-xs text-muted-foreground whitespace-nowrap shrink-0">
+            <Wifi className="h-3 w-3 md:h-3.5 md:w-3.5" />
             <span>{b.name}</span>
             <RssiIndicator rssi={b.rssi} />
             <span>{b.rssi} dBm</span>
           </div>
         ))}
-      </div>
-
-      {/* Controls */}
-      <div className="flex items-center gap-2">
-        <Select value={String(refreshInterval)} onValueChange={v => onIntervalChange(Number(v))}>
-          <SelectTrigger className="h-8 w-28 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="60">1 นาที</SelectItem>
-            <SelectItem value="300">5 นาที</SelectItem>
-            <SelectItem value="900">15 นาที</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggleSound}>
-          {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-        </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onOpenSettings}>
-          <Settings className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onOpenExport}>
-          <Download className="h-4 w-4" />
-        </Button>
-        <Link to="/history">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <History className="h-4 w-4" />
-          </Button>
-        </Link>
-        <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={onReboot}>
-          <RefreshCw className="h-3.5 w-3.5" /> Reboot
-        </Button>
       </div>
     </header>
   );

@@ -28,7 +28,7 @@ export default function TemperatureChart({ sensors, selectedSensor, onSelectSens
     <Card className="p-4 bg-card">
       <h2 className="text-sm font-semibold mb-3">📈 Temperature Trend</h2>
       <div className="rounded-lg bg-foreground/[0.03] p-3">
-        <ResponsiveContainer width="100%" height={320}>
+        <ResponsiveContainer width="100%" height={260} className="md:!h-[320px]">
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="time" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
