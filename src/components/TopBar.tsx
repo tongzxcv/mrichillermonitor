@@ -1,4 +1,5 @@
-import { Wifi, Volume2, VolumeX, Settings, Download, RefreshCw } from 'lucide-react';
+import { Wifi, Volume2, VolumeX, Settings, Download, RefreshCw, History } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -101,6 +102,11 @@ export default function TopBar({
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onOpenExport}>
           <Download className="h-4 w-4" />
         </Button>
+        <Link to="/history">
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <History className="h-4 w-4" />
+          </Button>
+        </Link>
         <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={onReboot}>
           <RefreshCw className="h-3.5 w-3.5" /> Reboot
         </Button>
