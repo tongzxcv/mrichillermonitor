@@ -46,7 +46,7 @@ export const SENSOR_CONFIGS: SensorConfig[] = [
   { id: 's10', name: 'Return Header', color: '#ec407a', threshold: 14 },
 ];
 
-const SENSOR_BASES = [18, 22, 24, 23, 25, 38, 30, 21, 25, 19];
+const SENSOR_BASES = [10, 12, 10, 12, 10, 12, 8, 12, 8, 12];
 
 function randomInRange(base: number, range: number) {
   return +(base + (Math.random() - 0.5) * range).toFixed(1);
