@@ -64,7 +64,7 @@ export default function SensorCard({ sensor, isSelected, onClick }: SensorCardPr
             sensor.status === 'critical' ? 'animate-blink' : 'bg-accent text-accent-foreground'
           }`}
         >
-          {sensor.status === 'critical' ? 'CRIT' : 'OK'}
+          {sensor.status === 'critical' ? 'CRIT' : 'NORMAL'}
         </Badge>
       </div>
 
