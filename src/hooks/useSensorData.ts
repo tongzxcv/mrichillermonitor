@@ -10,23 +10,32 @@ import {
 } from '@/data/mockSensors';
 import { isGasConfigured, fetchLatestData } from '@/services/gasApi';
 
-// Web Audio API - play alarm beep
+// Web Audio API - play alarm beep (5 beeps at 2500Hz)
 function playAlarmBeep() {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
-    oscillator.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
-    gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.4);
+    for (let i = 0; i < 5; i++) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = 'sine';
+      osc.frequency.value = 2500;
+
+      const startTime = ctx.currentTime + (i * 1.0);
+      const stopTime = startTime + 0.5;
+
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
+      gain.gain.setValueAtTime(0.3, stopTime - 0.01);
+      gain.gain.linearRampToValueAtTime(0, stopTime);
+
+      osc.start(startTime);
+      osc.stop(stopTime);
+    }
   } catch (e) {
-    // Audio not supported
+    console.log('Audio API error:', e);
   }
 }
 
