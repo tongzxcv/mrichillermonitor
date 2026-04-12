@@ -30,7 +30,7 @@ interface GasHistoryResponse {
   error?: string;
 }
 
-// Simple history store per sensor (keep last 50 readings in memory)
+// Rolling history per sensor (last 50 readings in memory)
 const sensorHistory: Record<string, { time: string; value: number }[]> = {};
 
 function fetchViaJsonp(targetUrl: string): Promise<any> {
@@ -59,7 +59,10 @@ function fetchViaJsonp(targetUrl: string): Promise<any> {
   });
 }
 
-export async function fetchLatestData(): Promise<GasLatestResponse> {
+// Accept thresholds from useSensorData so user-set values are respected
+export async function fetchLatestData(
+  thresholds?: Record<string, number>
+): Promise<GasLatestResponse> {
   const url = getGasUrl();
   if (!url) throw new Error('GAS URL not configured');
   const targetUrl = `${url}?action=getLatestData`;
@@ -71,11 +74,12 @@ export async function fetchLatestData(): Promise<GasLatestResponse> {
 
   const now = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
-  // Map raw GAS sensors to full SensorReading objects
   const sensors: SensorReading[] = data.sensors.map((s: { id: string; temp: number | null }) => {
     const config = SENSOR_CONFIGS.find(c => c.id === s.id);
     const temp = typeof s.temp === 'number' && !isNaN(s.temp) ? s.temp : 0;
-    const threshold = config?.threshold ?? 14;
+
+    // Use user-set threshold if available, fallback to config default
+    const threshold = thresholds?.[s.id] ?? config?.threshold ?? 14;
 
     // Update rolling history
     if (!sensorHistory[s.id]) sensorHistory[s.id] = [];
@@ -86,7 +90,9 @@ export async function fetchLatestData(): Promise<GasLatestResponse> {
     const values = hist.map(h => h.value);
     const minVal = Math.min(...values);
     const maxVal = Math.max(...values);
-    const avgVal = values.length > 0 ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10 : temp;
+    const avgVal = values.length > 0
+      ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10
+      : temp;
 
     return {
       id: s.id,
