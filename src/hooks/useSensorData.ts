@@ -1,14 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   generateSensorReadings,
-  generateAlerts,
   generateWifiBoards,
   type SensorReading,
   type AlertEntry,
   type WifiBoard,
   SENSOR_CONFIGS,
 } from '@/data/mockSensors';
-import { isGasConfigured, fetchLatestData } from '@/services/gasApi';
+import {
+  isGasConfigured,
+  fetchLatestData,
+  fetchChartHistory,
+  initSensorHistoryFromChart,
+  type ChartHistoryPoint,
+} from '@/services/gasApi';
 
 // Web Audio API - play alarm beep (5 beeps at 2500Hz)
 function playAlarmBeep() {
@@ -19,18 +24,14 @@ function playAlarmBeep() {
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
-
       osc.type = 'sine';
       osc.frequency.value = 2500;
-
       const startTime = ctx.currentTime + (i * 1.0);
       const stopTime = startTime + 0.5;
-
       gain.gain.setValueAtTime(0, startTime);
       gain.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
       gain.gain.setValueAtTime(0.3, stopTime - 0.01);
       gain.gain.linearRampToValueAtTime(0, stopTime);
-
       osc.start(startTime);
       osc.stop(stopTime);
     }
@@ -39,10 +40,33 @@ function playAlarmBeep() {
   }
 }
 
+// Generate alerts from critical sensors
+function buildAlertsFromSensors(sensors: SensorReading[]): AlertEntry[] {
+  const time = new Date().toLocaleTimeString('th-TH');
+  return sensors
+    .filter(s => s.current > 0 && s.status === 'critical')
+    .map(s => ({
+      id: `${s.id}-${Date.now()}`,
+      sensorId: s.id,
+      sensorName: s.name,
+      value: s.current,
+      threshold: s.threshold,
+      status: 'critical' as const,
+      timestamp: time,
+      severity: 'critical' as const,
+    }));
+}
+
+export interface ChartData {
+  labels: string[];
+  datasets: (number | null)[][];
+}
+
 export function useSensorData(refreshInterval: number) {
   const [sensors, setSensors] = useState<SensorReading[]>([]);
   const [alerts, setAlerts] = useState<AlertEntry[]>([]);
   const [wifi, setWifi] = useState<WifiBoard[]>([]);
+  const [chartData, setChartData] = useState<ChartData>({ labels: [], datasets: Array(10).fill([]) });
   const [thresholds, setThresholds] = useState<Record<string, number>>(
     Object.fromEntries(SENSOR_CONFIGS.map(s => [s.id, s.threshold]))
   );
@@ -52,41 +76,65 @@ export function useSensorData(refreshInterval: number) {
   const [dataSource, setDataSource] = useState<'mock' | 'gas'>(isGasConfigured() ? 'gas' : 'mock');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const prevCriticalRef = useRef<Set<string>>(new Set());
+
   const [checkDataSource] = useState(() => () => {
     setDataSource(isGasConfigured() ? 'gas' : 'mock');
   });
+
+  const loadHistory = useCallback(async () => {
+    if (!isGasConfigured()) { setHistoryLoaded(true); return; }
+    try {
+      const history = await fetchChartHistory();
+      if (history.length > 0) {
+        initSensorHistoryFromChart(history);
+        const labels = history.map(h => h.time);
+        const datasets = SENSOR_CONFIGS.map((_, idx) =>
+          history.map(h => {
+            const v = h.vals[idx];
+            return (v !== null && v !== undefined && !isNaN(v as number) && (v as number) > 0) ? v as number : null;
+          })
+        );
+        setChartData({ labels, datasets });
+      }
+    } catch (e) {
+      console.log('History load failed:', e);
+    }
+    setHistoryLoaded(true);
+  }, []);
 
   const refreshFromGas = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Pass current thresholds so GAS response uses user-set values
       const result = await fetchLatestData(thresholds);
       if (result.error) throw new Error(result.error);
       if (result.sensors && result.sensors.length > 0) {
         setSensors(result.sensors);
-
-        // Play sound if any critical sensor and sound is enabled
-        const hasCritical = result.sensors.some(s => s.status === 'critical');
-        if (hasCritical && soundEnabled) {
-          playAlarmBeep();
-        }
-
-        setAlerts(prev => {
-          const newAlerts = generateAlerts(result.sensors);
-          return [...newAlerts, ...prev].slice(0, 50);
+        const timeLabel = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        setChartData(prev => {
+          const newLabels = [...prev.labels, timeLabel];
+          const newDatasets = result.sensors.map((s, idx) => {
+            const prevDs = prev.datasets[idx] || [];
+            return [...prevDs, s.current > 0 ? s.current : null];
+          });
+          return { labels: newLabels, datasets: newDatasets };
         });
+        const currentCritical = new Set(result.sensors.filter(s => s.status === 'critical').map(s => s.id));
+        const newCritical = [...currentCritical].filter(id => !prevCriticalRef.current.has(id));
+        if (newCritical.length > 0) {
+          const newAlerts = buildAlertsFromSensors(result.sensors.filter(s => newCritical.includes(s.id)));
+          setAlerts(prev => [...newAlerts, ...prev].slice(0, 100));
+          if (soundEnabled) playAlarmBeep();
+        }
+        prevCriticalRef.current = currentCritical;
         setLastUpdated(result.timestamp ? new Date(result.timestamp) : new Date());
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'GAS fetch failed');
-      // Fallback to mock
       const newSensors = generateSensorReadings(thresholds);
       setSensors(newSensors);
-      setAlerts(prev => {
-        const newAlerts = generateAlerts(newSensors);
-        return [...newAlerts, ...prev].slice(0, 50);
-      });
       setLastUpdated(new Date());
     } finally {
       setLoading(false);
@@ -96,9 +144,14 @@ export function useSensorData(refreshInterval: number) {
   const refreshFromMock = useCallback(() => {
     const newSensors = generateSensorReadings(thresholds);
     setSensors(newSensors);
-    setAlerts(prev => {
-      const newAlerts = generateAlerts(newSensors);
-      return [...newAlerts, ...prev].slice(0, 50);
+    const timeLabel = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setChartData(prev => {
+      const newLabels = [...prev.labels, timeLabel];
+      const newDatasets = newSensors.map((s, idx) => {
+        const prevDs = prev.datasets[idx] || [];
+        return [...prevDs, s.current > 0 ? s.current : null];
+      });
+      return { labels: newLabels, datasets: newDatasets };
     });
     setWifi(generateWifiBoards());
     setLastUpdated(new Date());
@@ -110,11 +163,12 @@ export function useSensorData(refreshInterval: number) {
     } else {
       refreshFromMock();
     }
-    // Always update wifi from mock (GAS doesn't provide it)
     setWifi(generateWifiBoards());
   }, [dataSource, refreshFromGas, refreshFromMock]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    loadHistory().then(() => refresh());
+  }, []);
 
   useEffect(() => {
     if (refreshInterval <= 0) return;
@@ -130,6 +184,7 @@ export function useSensorData(refreshInterval: number) {
     sensors,
     alerts,
     wifi,
+    chartData,
     lastUpdated,
     selectedSensor,
     setSelectedSensor,
@@ -141,6 +196,7 @@ export function useSensorData(refreshInterval: number) {
     dataSource,
     loading,
     error,
+    historyLoaded,
     checkDataSource,
   };
 }
