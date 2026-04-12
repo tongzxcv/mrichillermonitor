@@ -1,4 +1,5 @@
 import type { SensorReading } from '@/data/mockSensors';
+import { SENSOR_CONFIGS } from '@/data/mockSensors';
 
 const GAS_URL_KEY = 'gas_webapp_url';
 
@@ -28,6 +29,9 @@ interface GasHistoryResponse {
   data: Record<string, string | number>[];
   error?: string;
 }
+
+// Simple history store per sensor (keep last 50 readings in memory)
+const sensorHistory: Record<string, { time: string; value: number }[]> = {};
 
 function fetchViaJsonp(targetUrl: string): Promise<any> {
   return new Promise((resolve, reject) => {
@@ -60,16 +64,51 @@ export async function fetchLatestData(): Promise<GasLatestResponse> {
   if (!url) throw new Error('GAS URL not configured');
   const targetUrl = `${url}?action=getLatestData`;
   const data = await fetchViaJsonp(targetUrl);
-  if (data && data.sensors && Array.isArray(data.sensors)) {
-    return {
-      sensors: data.sensors,
-      timestamp: new Date().toISOString(),
-      wifi1: data.wifi1,
-      wifi2: data.wifi2,
-      wifi3: data.wifi3,
-    };
+
+  if (!data || !Array.isArray(data.sensors)) {
+    throw new Error('Invalid response format from GAS');
   }
-  throw new Error('Invalid response format from GAS');
+
+  const now = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+  // Map raw GAS sensors to full SensorReading objects
+  const sensors: SensorReading[] = data.sensors.map((s: { id: string; temp: number | null }) => {
+    const config = SENSOR_CONFIGS.find(c => c.id === s.id);
+    const temp = typeof s.temp === 'number' && !isNaN(s.temp) ? s.temp : 0;
+    const threshold = config?.threshold ?? 14;
+
+    // Update rolling history
+    if (!sensorHistory[s.id]) sensorHistory[s.id] = [];
+    sensorHistory[s.id].push({ time: now, value: temp });
+    if (sensorHistory[s.id].length > 50) sensorHistory[s.id].shift();
+
+    const hist = sensorHistory[s.id];
+    const values = hist.map(h => h.value);
+    const minVal = Math.min(...values);
+    const maxVal = Math.max(...values);
+    const avgVal = values.length > 0 ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10 : temp;
+
+    return {
+      id: s.id,
+      name: config?.name ?? s.id,
+      color: config?.color ?? '#888888',
+      current: temp,
+      min: minVal,
+      max: maxVal,
+      avg: avgVal,
+      threshold,
+      status: temp > threshold ? 'critical' : 'normal',
+      history: [...hist],
+    };
+  });
+
+  return {
+    sensors,
+    timestamp: new Date().toISOString(),
+    wifi1: typeof data.wifi1 === 'number' ? data.wifi1 : null,
+    wifi2: typeof data.wifi2 === 'number' ? data.wifi2 : null,
+    wifi3: typeof data.wifi3 === 'number' ? data.wifi3 : null,
+  };
 }
 
 export async function fetchHistoryData(date: string): Promise<GasHistoryResponse> {
