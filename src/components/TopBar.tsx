@@ -1,4 +1,4 @@
-import { Wifi, Volume2, VolumeX, Settings, Download, RefreshCw, History } from 'lucide-react';
+import { Wifi, Volume2, VolumeX, Settings, Download, RefreshCw, History, Link2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,7 +14,10 @@ interface TopBarProps {
   onIntervalChange: (val: number) => void;
   onOpenSettings: () => void;
   onOpenExport: () => void;
+  onOpenGasConfig: () => void;
   onReboot: () => void;
+  dataSource: 'mock' | 'gas';
+  loading: boolean;
 }
 
 function rssiToStrength(rssi: number) {

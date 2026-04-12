@@ -8,6 +8,7 @@ import {
   type WifiBoard,
   SENSOR_CONFIGS,
 } from '@/data/mockSensors';
+import { isGasConfigured, fetchLatestData } from '@/services/gasApi';
 
 export function useSensorData(refreshInterval: number) {
   const [sensors, setSensors] = useState<SensorReading[]>([]);
@@ -19,8 +20,40 @@ export function useSensorData(refreshInterval: number) {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [selectedSensor, setSelectedSensor] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [dataSource, setDataSource] = useState<'mock' | 'gas'>(isGasConfigured() ? 'gas' : 'mock');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(() => {
+  const refreshFromGas = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetchLatestData();
+      if (result.error) throw new Error(result.error);
+      if (result.sensors && result.sensors.length > 0) {
+        setSensors(result.sensors);
+        setAlerts(prev => {
+          const newAlerts = generateAlerts(result.sensors);
+          return [...newAlerts, ...prev].slice(0, 50);
+        });
+        setLastUpdated(result.timestamp ? new Date(result.timestamp) : new Date());
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'GAS fetch failed');
+      // Fallback to mock
+      const newSensors = generateSensorReadings(thresholds);
+      setSensors(newSensors);
+      setAlerts(prev => {
+        const newAlerts = generateAlerts(newSensors);
+        return [...newAlerts, ...prev].slice(0, 50);
+      });
+      setLastUpdated(new Date());
+    } finally {
+      setLoading(false);
+    }
+  }, [thresholds]);
+
+  const refreshFromMock = useCallback(() => {
     const newSensors = generateSensorReadings(thresholds);
     setSensors(newSensors);
     setAlerts(prev => {
@@ -30,6 +63,20 @@ export function useSensorData(refreshInterval: number) {
     setWifi(generateWifiBoards());
     setLastUpdated(new Date());
   }, [thresholds]);
+
+  const refresh = useCallback(() => {
+    if (dataSource === 'gas' && isGasConfigured()) {
+      refreshFromGas();
+    } else {
+      refreshFromMock();
+    }
+    // Always update wifi from mock (GAS doesn't provide it)
+    setWifi(generateWifiBoards());
+  }, [dataSource, refreshFromGas, refreshFromMock]);
+
+  const checkDataSource = useCallback(() => {
+    setDataSource(isGasConfigured() ? 'gas' : 'mock');
+  }, []);
 
   useEffect(() => {
     refresh();
@@ -57,5 +104,9 @@ export function useSensorData(refreshInterval: number) {
     thresholds,
     updateThreshold,
     refresh,
+    dataSource,
+    loading,
+    error,
+    checkDataSource,
   };
 }
