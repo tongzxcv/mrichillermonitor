@@ -65,25 +65,32 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "card-blink": {
+          "0%, 100%": { borderColor: "#ffcdd2", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" },
+          "50%": { borderColor: "#f44336", boxShadow: "0 0 0 3px rgba(244,67,54,0.15), 0 8px 30px rgba(244,67,54,0.2)" },
+        },
+        "temp-blink": {
+          "0%, 100%": { color: "#c62828" },
+          "50%": { color: "#ff1744", textShadow: "0 0 12px rgba(255,23,68,0.5)" },
+        },
+        "critical-badge": {
+          "0%, 100%": { boxShadow: "0 4px 14px rgba(244,67,54,0.35)" },
+          "50%": { boxShadow: "0 4px 24px rgba(244,67,54,0.6)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "card-blink": "card-blink 1.4s ease-in-out infinite",
+        "temp-blink": "temp-blink 1.4s ease-in-out infinite",
+        "critical-badge": "critical-badge 1.8s ease-in-out infinite",
       },
     },
   },
