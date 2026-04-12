@@ -91,7 +91,7 @@ export default function SensorCard({ sensor, isSelected, onClick }: SensorCardPr
         </div>
       </div>
       <div className="text-center mt-0.5">
-        <div className="text-[8px] sm:text-[9px] text-muted-foreground">TH:{sensor.threshold}°C</div>
+        <div className="text-[8px] sm:text-[9px] text-muted-foreground">Threshold:{sensor.threshold}°C</div>
       </div>
     </Card>
   );
