@@ -1,4 +1,4 @@
-import { Wifi, Volume2, VolumeX, Settings, Download, RefreshCw, History } from 'lucide-react';
+import { Wifi, Volume2, VolumeX, Settings, Download, RefreshCw, History, Link2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,7 +14,10 @@ interface TopBarProps {
   onIntervalChange: (val: number) => void;
   onOpenSettings: () => void;
   onOpenExport: () => void;
+  onOpenGasConfig: () => void;
   onReboot: () => void;
+  dataSource: 'mock' | 'gas';
+  loading: boolean;
 }
 
 function rssiToStrength(rssi: number) {
@@ -49,7 +52,10 @@ export default function TopBar({
   onIntervalChange,
   onOpenSettings,
   onOpenExport,
+  onOpenGasConfig,
   onReboot,
+  dataSource,
+  loading,
 }: TopBarProps) {
   return (
     <header className="flex flex-col gap-3 rounded-lg bg-card p-3 md:p-4 shadow-sm">
@@ -58,7 +64,15 @@ export default function TopBar({
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xl md:text-2xl">❄️</span>
           <div className="min-w-0">
-            <h1 className="text-sm md:text-lg font-bold leading-tight truncate">MRI Chiller Monitor</h1>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-sm md:text-lg font-bold leading-tight truncate">MRI Chiller Monitor</h1>
+              {dataSource === 'gas' ? (
+                <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-accent text-accent">GAS</Badge>
+              ) : (
+                <Badge variant="outline" className="text-[9px] px-1.5 py-0 text-muted-foreground">Mock</Badge>
+              )}
+              {loading && <span className="text-[9px] text-muted-foreground animate-pulse">⏳</span>}
+            </div>
             <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-muted-foreground">
               <span className="relative flex h-2 w-2 shrink-0">
                 <span className="animate-pulse-live absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
@@ -90,6 +104,9 @@ export default function TopBar({
           </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8" onClick={onOpenExport}>
             <Download className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8" onClick={onOpenGasConfig} title="GAS Config">
+            <Link2 className="h-3.5 w-3.5" />
           </Button>
           <Link to="/history">
             <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8">
