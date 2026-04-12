@@ -52,7 +52,10 @@ export default function TopBar({
   onIntervalChange,
   onOpenSettings,
   onOpenExport,
+  onOpenGasConfig,
   onReboot,
+  dataSource,
+  loading,
 }: TopBarProps) {
   return (
     <header className="flex flex-col gap-3 rounded-lg bg-card p-3 md:p-4 shadow-sm">
