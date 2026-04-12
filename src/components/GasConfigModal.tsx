@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { getGasUrl, setGasUrl, isGasConfigured } from '@/services/gasApi';
+import { getGasUrl, setGasUrl, isGasConfigured, checkGasConnection } from '@/services/gasApi';
 
 interface GasConfigModalProps {
   open: boolean;
@@ -21,17 +21,18 @@ export default function GasConfigModal({ open, onClose, onSave }: GasConfigModal
     setTesting(true);
     setStatus('idle');
     try {
-      const res = await fetch(`${url.trim()}?action=config`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setStatus('success');
-    } catch {
-      setStatus('error');
-    } finally {
-      setTesting(false);
-    }
-  };
+      const handleTest = async () => {
+  setTesting(true);
+  setStatus('idle');
+  try {
+    const result = await checkGasConnection(url);
+    setStatus(result.ok ? 'success' : 'error');
+  } catch {
+    setStatus('error');
+  } finally {
+    setTesting(false);
+  }
+};
 
   const handleSave = () => {
     setGasUrl(url);
