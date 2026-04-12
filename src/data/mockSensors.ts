@@ -46,8 +46,9 @@ export const SENSOR_CONFIGS: SensorConfig[] = [
   { id: 's10', name: 'Return Header', color: '#ec407a', threshold: 14 },
 ];
 
-// Some bases intentionally close to/above threshold to trigger critical status
-const SENSOR_BASES = [11, 12, 10, 12, 10, 12, 8, 12, 8, 13];
+// s1(th:12), s2(th:14), s3(th:12), s4(th:14), s5(th:12), s6(th:14), s7(th:10), s8(th:14), s9(th:10), s10(th:14)
+// Some bases set ABOVE threshold to guarantee critical + blinking
+const SENSOR_BASES = [13, 12, 10, 12, 10, 15, 8, 12, 8, 15];
 
 function randomInRange(base: number, range: number) {
   return +(base + (Math.random() - 0.5) * range).toFixed(1);
