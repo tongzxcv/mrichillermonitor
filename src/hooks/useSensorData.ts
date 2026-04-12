@@ -10,6 +10,26 @@ import {
 } from '@/data/mockSensors';
 import { isGasConfigured, fetchLatestData } from '@/services/gasApi';
 
+// Web Audio API - play alarm beep
+function playAlarmBeep() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+    oscillator.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
+    gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.4);
+  } catch (e) {
+    // Audio not supported
+  }
+}
+
 export function useSensorData(refreshInterval: number) {
   const [sensors, setSensors] = useState<SensorReading[]>([]);
   const [alerts, setAlerts] = useState<AlertEntry[]>([]);
@@ -23,15 +43,26 @@ export function useSensorData(refreshInterval: number) {
   const [dataSource, setDataSource] = useState<'mock' | 'gas'>(isGasConfigured() ? 'gas' : 'mock');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [checkDataSource] = useState(() => () => {
+    setDataSource(isGasConfigured() ? 'gas' : 'mock');
+  });
 
   const refreshFromGas = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchLatestData();
+      // Pass current thresholds so GAS response uses user-set values
+      const result = await fetchLatestData(thresholds);
       if (result.error) throw new Error(result.error);
       if (result.sensors && result.sensors.length > 0) {
         setSensors(result.sensors);
+
+        // Play sound if any critical sensor and sound is enabled
+        const hasCritical = result.sensors.some(s => s.status === 'critical');
+        if (hasCritical && soundEnabled) {
+          playAlarmBeep();
+        }
+
         setAlerts(prev => {
           const newAlerts = generateAlerts(result.sensors);
           return [...newAlerts, ...prev].slice(0, 50);
@@ -51,7 +82,7 @@ export function useSensorData(refreshInterval: number) {
     } finally {
       setLoading(false);
     }
-  }, [thresholds]);
+  }, [thresholds, soundEnabled]);
 
   const refreshFromMock = useCallback(() => {
     const newSensors = generateSensorReadings(thresholds);
@@ -74,13 +105,7 @@ export function useSensorData(refreshInterval: number) {
     setWifi(generateWifiBoards());
   }, [dataSource, refreshFromGas, refreshFromMock]);
 
-  const checkDataSource = useCallback(() => {
-    setDataSource(isGasConfigured() ? 'gas' : 'mock');
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useEffect(() => { refresh(); }, [refresh]);
 
   useEffect(() => {
     if (refreshInterval <= 0) return;
@@ -88,9 +113,9 @@ export function useSensorData(refreshInterval: number) {
     return () => clearInterval(id);
   }, [refresh, refreshInterval]);
 
-  const updateThreshold = (sensorId: string, value: number) => {
+  const updateThreshold = useCallback((sensorId: string, value: number) => {
     setThresholds(prev => ({ ...prev, [sensorId]: value }));
-  };
+  }, []);
 
   return {
     sensors,
