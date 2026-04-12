@@ -64,7 +64,15 @@ export default function TopBar({
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xl md:text-2xl">❄️</span>
           <div className="min-w-0">
-            <h1 className="text-sm md:text-lg font-bold leading-tight truncate">MRI Chiller Monitor</h1>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-sm md:text-lg font-bold leading-tight truncate">MRI Chiller Monitor</h1>
+              {dataSource === 'gas' ? (
+                <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-accent text-accent">GAS</Badge>
+              ) : (
+                <Badge variant="outline" className="text-[9px] px-1.5 py-0 text-muted-foreground">Mock</Badge>
+              )}
+              {loading && <span className="text-[9px] text-muted-foreground animate-pulse">⏳</span>}
+            </div>
             <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-muted-foreground">
               <span className="relative flex h-2 w-2 shrink-0">
                 <span className="animate-pulse-live absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
