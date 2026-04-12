@@ -34,6 +34,11 @@ function doGet(e) {
     case 'config':
       result = getConfig();
       break;
+    case 'export':
+      var fromDate = (e.parameter && e.parameter.from) || '';
+      var toDate = (e.parameter && e.parameter.to) || '';
+      result = getExportData(fromDate, toDate);
+      break;
     default:
       result = { error: 'Unknown action: ' + action };
   }
@@ -225,4 +230,61 @@ function updateConfig(configArr) {
     sheet.getRange(i + 2, 1, 1, 4).setValues([[c.id, c.name, c.threshold, c.color]]);
   }
   return { success: true };
+
+// ====== Export Data by Date Range ======
+
+function getExportData(fromDate, toDate) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('SensorData');
+  if (!sheet) return { error: 'Sheet "SensorData" not found' };
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  // Get all data at once (faster than row-by-row)
+  var data = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
+
+  // Parse date range
+  var from = fromDate ? new Date(fromDate + 'T00:00:00') : null;
+  var to = toDate ? new Date(toDate + 'T23:59:59') : null;
+
+  var result = [];
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    var ts = row[0];
+    if (!ts) continue;
+
+    var rowDate = ts instanceof Date ? ts : new Date(ts);
+    if (isNaN(rowDate.getTime())) continue;
+
+    // Filter by date range
+    if (from && rowDate < from) continue;
+    if (to && rowDate > to) continue;
+
+    // Format timestamp as local string
+    var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+    var formatted = rowDate.getFullYear() + '-' +
+      pad(rowDate.getMonth() + 1) + '-' +
+      pad(rowDate.getDate()) + ' ' +
+      pad(rowDate.getHours()) + ':' +
+      pad(rowDate.getMinutes()) + ':' +
+      pad(rowDate.getSeconds());
+
+    result.push({
+      time: formatted,
+      t1: row[1] !== '' ? Number(row[1]) : null,
+      t2: row[2] !== '' ? Number(row[2]) : null,
+      t3: row[3] !== '' ? Number(row[3]) : null,
+      t4: row[4] !== '' ? Number(row[4]) : null,
+      t5: row[5] !== '' ? Number(row[5]) : null,
+      t6: row[6] !== '' ? Number(row[6]) : null,
+      t7: row[7] !== '' ? Number(row[7]) : null,
+      t8: row[8] !== '' ? Number(row[8]) : null,
+      t9: row[9] !== '' ? Number(row[9]) : null,
+      t10: row[10] !== '' ? Number(row[10]) : null
+    });
+  }
+
+  return result;
+}
 }
