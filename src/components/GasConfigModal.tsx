@@ -21,18 +21,14 @@ export default function GasConfigModal({ open, onClose, onSave }: GasConfigModal
     setTesting(true);
     setStatus('idle');
     try {
-      const handleTest = async () => {
-  setTesting(true);
-  setStatus('idle');
-  try {
-    const result = await checkGasConnection(url);
-    setStatus(result.ok ? 'success' : 'error');
-  } catch {
-    setStatus('error');
-  } finally {
-    setTesting(false);
-  }
-};
+      const result = await checkGasConnection(url);
+      setStatus(result.ok ? 'success' : 'error');
+    } catch {
+      setStatus('error');
+    } finally {
+      setTesting(false);
+    }
+  };
 
   const handleSave = () => {
     setGasUrl(url);
@@ -78,7 +74,7 @@ export default function GasConfigModal({ open, onClose, onSave }: GasConfigModal
           </div>
 
           <p className="text-[10px] text-muted-foreground">
-            วาง URL จาก Google Apps Script Deploy → Web app ที่นี่
+            วาง URL จาก Google Apps Script Deploy → Web app ที่นี่<br/>
             ระบบจะดึงข้อมูลจาก Google Sheets แทน mock data
           </p>
         </div>
