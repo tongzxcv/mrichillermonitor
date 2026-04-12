@@ -24,14 +24,14 @@ interface GasLatestResponse {
   error?: string;
 }
 
-interface GasHistoryResponse {
-  date: string;
-  data: Record<string, string | number>[];
-  error?: string;
+export interface ChartHistoryPoint {
+  time: string;
+  vals: (number | null)[];
 }
 
-// Rolling history per sensor (last 50 readings in memory)
+// Rolling history per sensor (last 288 readings = 1 day at 5min interval)
 const sensorHistory: Record<string, { time: string; value: number }[]> = {};
+const HISTORY_MAX = 288;
 
 function fetchViaJsonp(targetUrl: string): Promise<any> {
   return new Promise((resolve, reject) => {
@@ -40,7 +40,7 @@ function fetchViaJsonp(targetUrl: string): Promise<any> {
     const timeout = setTimeout(() => {
       cleanup();
       reject(new Error('JSONP timeout'));
-    }, 10000);
+    }, 15000);
 
     function cleanup() {
       clearTimeout(timeout);
@@ -59,6 +59,20 @@ function fetchViaJsonp(targetUrl: string): Promise<any> {
   });
 }
 
+// Pre-fill sensorHistory from GAS chart history (called on init)
+export function initSensorHistoryFromChart(history: ChartHistoryPoint[]) {
+  // Clear existing
+  SENSOR_CONFIGS.forEach(c => { sensorHistory[c.id] = []; });
+  history.forEach(point => {
+    SENSOR_CONFIGS.forEach((c, idx) => {
+      const val = point.vals[idx];
+      if (val !== null && val !== undefined && !isNaN(val as number)) {
+        sensorHistory[c.id].push({ time: point.time, value: val as number });
+      }
+    });
+  });
+}
+
 // Accept thresholds from useSensorData so user-set values are respected
 export async function fetchLatestData(
   thresholds?: Record<string, number>
@@ -72,7 +86,7 @@ export async function fetchLatestData(
     throw new Error('Invalid response format from GAS');
   }
 
-  const now = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  const now = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   const sensors: SensorReading[] = data.sensors.map((s: { id: string; temp: number | null }) => {
     const config = SENSOR_CONFIGS.find(c => c.id === s.id);
@@ -83,13 +97,15 @@ export async function fetchLatestData(
 
     // Update rolling history
     if (!sensorHistory[s.id]) sensorHistory[s.id] = [];
-    sensorHistory[s.id].push({ time: now, value: temp });
-    if (sensorHistory[s.id].length > 50) sensorHistory[s.id].shift();
+    if (temp > 0) {
+      sensorHistory[s.id].push({ time: now, value: temp });
+      if (sensorHistory[s.id].length > HISTORY_MAX) sensorHistory[s.id].shift();
+    }
 
     const hist = sensorHistory[s.id];
-    const values = hist.map(h => h.value);
-    const minVal = Math.min(...values);
-    const maxVal = Math.max(...values);
+    const values = hist.map(h => h.value).filter(v => v > 0);
+    const minVal = values.length > 0 ? Math.min(...values) : temp;
+    const maxVal = values.length > 0 ? Math.max(...values) : temp;
     const avgVal = values.length > 0
       ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10
       : temp;
@@ -103,7 +119,7 @@ export async function fetchLatestData(
       max: maxVal,
       avg: avgVal,
       threshold,
-      status: temp > threshold ? 'critical' : 'normal',
+      status: temp > 0 && temp > threshold ? 'critical' : 'normal',
       history: [...hist],
     };
   });
@@ -117,15 +133,18 @@ export async function fetchLatestData(
   };
 }
 
-export async function fetchHistoryData(date: string): Promise<GasHistoryResponse> {
+// Fetch chart history from GAS (action=getChartHistory)
+// GAS returns: [{time, vals:[s1,s2,...,s10]}, ...]
+export async function fetchChartHistory(): Promise<ChartHistoryPoint[]> {
   const url = getGasUrl();
   if (!url) throw new Error('GAS URL not configured');
   const targetUrl = `${url}?action=getChartHistory`;
   const data = await fetchViaJsonp(targetUrl);
-  return {
-    date: date,
-    data: Array.isArray(data) ? data : [],
-  };
+  if (!Array.isArray(data)) return [];
+  return data.map((row: any) => ({
+    time: String(row.time || '--:--'),
+    vals: Array.isArray(row.vals) ? row.vals : [],
+  }));
 }
 
 export async function checkGasConnection(url: string): Promise<{ ok: boolean; message: string }> {
