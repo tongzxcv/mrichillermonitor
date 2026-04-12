@@ -46,7 +46,8 @@ export const SENSOR_CONFIGS: SensorConfig[] = [
   { id: 's10', name: 'Return Header', color: '#ec407a', threshold: 14 },
 ];
 
-const SENSOR_BASES = [10, 12, 10, 12, 10, 12, 8, 12, 8, 12];
+// Some bases intentionally close to/above threshold to trigger critical status
+const SENSOR_BASES = [11, 12, 10, 12, 10, 12, 8, 12, 8, 13];
 
 function randomInRange(base: number, range: number) {
   return +(base + (Math.random() - 0.5) * range).toFixed(1);
