@@ -105,6 +105,9 @@ export default function TopBar({
           <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8" onClick={onOpenExport}>
             <Download className="h-3.5 w-3.5" />
           </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8" onClick={onOpenGasConfig} title="GAS Config">
+            <Link2 className="h-3.5 w-3.5" />
+          </Button>
           <Link to="/history">
             <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8">
               <History className="h-3.5 w-3.5" />
