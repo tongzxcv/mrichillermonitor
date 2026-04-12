@@ -37,7 +37,7 @@ function CircularGauge({ value, max, color, status }: { value: number; max: numb
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className={`text-base sm:text-lg md:text-xl font-bold ${status === 'critical' ? 'text-destructive' : ''}`}>
+        <span className={`text-base sm:text-lg md:text-xl font-bold ${status === 'critical' ? 'animate-temp-blink' : ''}`}>
           {value}°C
         </span>
       </div>
@@ -53,7 +53,7 @@ export default function SensorCard({ sensor, isSelected, onClick }: SensorCardPr
         isSelected ? 'ring-2 ring-primary' : ''
       } ${
         sensor.status === 'critical'
-          ? 'bg-destructive/10 border-destructive/30 animate-[pulse_2s_ease-in-out_infinite]'
+          ? 'bg-destructive/10 border-destructive/30 animate-card-blink'
           : ''
       }`}
     >
@@ -63,7 +63,7 @@ export default function SensorCard({ sensor, isSelected, onClick }: SensorCardPr
           <span className="text-[10px] sm:text-xs font-medium truncate max-w-[80px] sm:max-w-none">{sensor.name}</span>
         </div>
         {sensor.status === 'critical' ? (
-          <Badge variant="destructive" className="text-[9px] sm:text-[10px] px-1 py-0 animate-[pulse_2s_ease-in-out_infinite]">CRIT</Badge>
+          <Badge variant="destructive" className="text-[9px] sm:text-[10px] px-1 py-0 animate-critical-badge">CRIT</Badge>
         ) : (
           <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 py-0 text-green-600 border-green-600">NORMAL</Badge>
         )}
