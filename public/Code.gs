@@ -1,52 +1,79 @@
 /**
- * =====================================================
- *  MRI Chiller Monitor — Google Apps Script Backend
- * =====================================================
+ * MRI Chiller Monitor - Google Apps Script backend
  *
- *  วิธีใช้:
- *  1. เปิด Google Sheets ใหม่
- *  2. ไปที่ Extensions > Apps Script
- *  3. วาง code นี้ลงใน Code.gs
- *  4. สร้าง Sheet ชื่อ "SensorData" ที่มี header:
- *     | timestamp | s1 | s2 | s3 | s4 | s5 | s6 | s7 | s8 | s9 | s10 |
- *  5. สร้าง Sheet ชื่อ "Config" ที่มี header:
- *     | sensorId | name | threshold | color |
- *  6. Deploy > New deployment > Web app
- *     - Execute as: Me
- *     - Who has access: Anyone
- *  7. คัดลอก URL มาใส่ใน React app (.env หรือ Settings)
+ * Required sheets:
+ * 1. SensorData
+ *    Header: timestamp, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10
+ * 2. Config
+ *    Header: sensorId, name, threshold, color
  */
 
-// ====== CORS + Routing ======
+var SENSOR_SHEET_NAME = 'SensorData';
+var CONFIG_SHEET_NAME = 'Config';
+var HISTORY_MAX = 288;
 
 function doGet(e) {
-  var action = (e && e.parameter && e.parameter.action) || 'latest';
+  var action = (e && e.parameter && e.parameter.action) || 'getLatestData';
   var callback = (e && e.parameter && e.parameter.callback) || '';
-
   var result;
+
   switch (action) {
     case 'latest':
+    case 'getLatestData':
       result = getLatestData();
       break;
     case 'history':
-      var date = (e.parameter && e.parameter.date) || '';
-      result = getHistoryData(date);
+    case 'getHistoryData':
+      result = getHistoryData((e.parameter && e.parameter.date) || '');
+      break;
+    case 'getChartHistory':
+      result = getChartHistory();
       break;
     case 'config':
+    case 'getConfig':
       result = getConfig();
       break;
     case 'exportCsv':
-      var startDate = (e.parameter && e.parameter.startDate) || '';
-      var endDate = (e.parameter && e.parameter.endDate) || '';
-      var sensorsParam = (e.parameter && e.parameter.sensors) || '';
-      var selectedSensors = sensorsParam ? sensorsParam.split(',') : [];
-      result = getExportData(startDate, endDate, selectedSensors);
+      result = getExportData(
+        (e.parameter && e.parameter.startDate) || '',
+        (e.parameter && e.parameter.endDate) || '',
+        ((e.parameter && e.parameter.sensors) || '').split(',').filter(String)
+      );
       break;
     default:
       result = { error: 'Unknown action: ' + action };
+      break;
   }
 
-  var json = JSON.stringify(result);
+  return outputJson(result, callback);
+}
+
+function doPost(e) {
+  try {
+    var body = JSON.parse(e.postData.contents || '{}');
+    var action = body.action || '';
+    var result;
+
+    switch (action) {
+      case 'log':
+        result = logSensorData(body.data || {});
+        break;
+      case 'updateConfig':
+        result = updateConfig(body.config || []);
+        break;
+      default:
+        result = { error: 'Unknown POST action: ' + action };
+        break;
+    }
+
+    return outputJson(result, '');
+  } catch (error) {
+    return outputJson({ error: String(error) }, '');
+  }
+}
+
+function outputJson(payload, callback) {
+  var json = JSON.stringify(payload);
   if (callback) {
     return ContentService
       .createTextOutput(callback + '(' + json + ')')
@@ -57,71 +84,36 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function doPost(e) {
-  try {
-    var body = JSON.parse(e.postData.contents);
-    var action = body.action || '';
-
-    var result;
-    switch (action) {
-      case 'log':
-        result = logSensorData(body.data);
-        break;
-      case 'updateConfig':
-        result = updateConfig(body.config);
-        break;
-      default:
-        result = { error: 'Unknown POST action' };
-    }
-
-    return ContentService
-      .createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ error: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-// ====== Data Functions ======
-
 function getLatestData() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('SensorData');
-  if (!sheet) return { error: 'Sheet "SensorData" not found' };
-
-  var data = sheet.getDataRange().getValues();
-  if (data.length < 2) return { sensors: [], timestamp: null };
-
-  var headers = data[0]; // [timestamp, s1, s2, ..., s10]
-  var historyRows = data.slice(Math.max(1, data.length - 20)); // last 20 rows
+  var context = getSensorSheetContext();
+  if (context.error) return context.error;
+  if (context.rows.length === 0) return { sensors: [], timestamp: null };
 
   var config = getConfigMap();
-
+  var historyRows = context.rows.slice(Math.max(0, context.rows.length - 20));
   var sensors = [];
-  for (var col = 1; col < headers.length; col++) {
-    var sensorId = headers[col];
-    var cfg = config[sensorId] || { name: sensorId, threshold: 14, color: '#888' };
+  var lastRow = context.rows[context.rows.length - 1];
 
+  for (var col = 1; col < context.headers.length; col++) {
+    var sensorId = context.headers[col];
+    var cfg = config[sensorId] || { name: sensorId, threshold: 14, color: '#888888' };
     var values = [];
     var history = [];
-    for (var row = 0; row < historyRows.length; row++) {
-      var val = Number(historyRows[row][col]);
-      values.push(val);
-      var t = historyRows[row][0];
-      var timeStr = (t instanceof Date)
-        ? Utilities.formatDate(t, Session.getScriptTimeZone(), 'HH:mm')
-        : String(t);
-      history.push({ time: timeStr, value: val });
+
+    for (var rowIndex = 0; rowIndex < historyRows.length; rowIndex++) {
+      var rawValue = Number(historyRows[rowIndex][col]);
+      var temp = isFinite(rawValue) ? rawValue : 0;
+      values.push(temp);
+      history.push({
+        time: formatTime(historyRows[rowIndex][0]),
+        value: temp
+      });
     }
 
-    var current = values[values.length - 1];
-    var min = Math.min.apply(null, values);
-    var max = Math.max.apply(null, values);
-    var sum = 0;
-    for (var v = 0; v < values.length; v++) sum += values[v];
-    var avg = Math.round((sum / values.length) * 10) / 10;
+    var current = values.length ? values[values.length - 1] : 0;
+    var min = values.length ? Math.min.apply(null, values) : 0;
+    var max = values.length ? Math.max.apply(null, values) : 0;
+    var avg = values.length ? round1(sum(values) / values.length) : 0;
 
     sensors.push({
       id: sensorId,
@@ -137,106 +129,299 @@ function getLatestData() {
     });
   }
 
-  var lastRow = data[data.length - 1];
-  var timestamp = lastRow[0] instanceof Date
-    ? lastRow[0].toISOString()
-    : String(lastRow[0]);
-
-  return { sensors: sensors, timestamp: timestamp };
+  return {
+    sensors: sensors,
+    timestamp: formatTimestamp(lastRow[0])
+  };
 }
 
 function getHistoryData(dateStr) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('SensorData');
-  if (!sheet) return { error: 'Sheet "SensorData" not found' };
+  var context = getSensorSheetContext();
+  if (context.error) return context.error;
 
-  var data = sheet.getDataRange().getValues();
-  var headers = data[0];
+  var range = getDateRange(dateStr, dateStr);
+  var data = [];
 
-  var targetDate = dateStr ? new Date(dateStr) : new Date();
-  var targetDay = Utilities.formatDate(targetDate, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  for (var rowIndex = 0; rowIndex < context.rows.length; rowIndex++) {
+    var row = context.rows[rowIndex];
+    var timestamp = parseTimestamp(row[0]);
+    if (!timestamp || !isWithinRange(timestamp, range)) continue;
 
-  var filtered = [];
-  for (var i = 1; i < data.length; i++) {
-    var rowDate = data[i][0];
-    if (rowDate instanceof Date) {
-      var rowDay = Utilities.formatDate(rowDate, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-      if (rowDay === targetDay) {
-        var point = {
-          time: Utilities.formatDate(rowDate, Session.getScriptTimeZone(), 'HH:mm')
-        };
-        for (var col = 1; col < headers.length; col++) {
-          point[headers[col]] = Number(data[i][col]);
-        }
-        filtered.push(point);
-      }
+    var point = { time: formatTime(timestamp) };
+    for (var col = 1; col < context.headers.length; col++) {
+      point[context.headers[col]] = toNumberOrNull(row[col]);
     }
+    data.push(point);
   }
 
-  return { date: targetDay, data: filtered };
+  return {
+    date: dateStr || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+    data: data
+  };
+}
+
+function getChartHistory() {
+  var context = getSensorSheetContext();
+  if (context.error) return [];
+
+  var rows = context.rows.slice(Math.max(0, context.rows.length - HISTORY_MAX));
+  var points = [];
+
+  for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+    var row = rows[rowIndex];
+    var vals = [];
+    for (var col = 1; col < context.headers.length; col++) {
+      vals.push(toNumberOrNull(row[col]));
+    }
+    points.push({
+      time: formatTime(row[0]),
+      vals: vals
+    });
+  }
+
+  return points;
+}
+
+function getExportData(startDateStr, endDateStr, selectedSensors) {
+  var context = getSensorSheetContext();
+  if (context.error) return context.error;
+
+  var range = getDateRange(startDateStr, endDateStr);
+  var selectedColumns = getSelectedSensorColumns(context.headers, selectedSensors);
+  var rows = [];
+
+  for (var rowIndex = 0; rowIndex < context.rows.length; rowIndex++) {
+    var row = context.rows[rowIndex];
+    var timestamp = parseTimestamp(row[0]);
+    if (!timestamp || !isWithinRange(timestamp, range)) continue;
+
+    var exportRow = {
+      timestamp: formatTimestamp(timestamp)
+    };
+
+    for (var i = 0; i < selectedColumns.length; i++) {
+      var selected = selectedColumns[i];
+      exportRow[selected.header] = toNumberOrNull(row[selected.columnIndex]);
+    }
+
+    rows.push(exportRow);
+  }
+
+  return {
+    columns: ['timestamp'].concat(selectedColumns.map(function (item) { return item.header; })),
+    rows: rows,
+    count: rows.length
+  };
 }
 
 function getConfig() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('Config');
-  if (!sheet) return { error: 'Sheet "Config" not found' };
+  var sheet = getSheetByName(CONFIG_SHEET_NAME);
+  if (!sheet) return { error: 'Sheet "' + CONFIG_SHEET_NAME + '" not found' };
 
-  var data = sheet.getDataRange().getValues();
+  var values = sheet.getDataRange().getValues();
   var configs = [];
-  for (var i = 1; i < data.length; i++) {
+  for (var i = 1; i < values.length; i++) {
+    if (!values[i][0]) continue;
     configs.push({
-      id: data[i][0],
-      name: data[i][1],
-      threshold: Number(data[i][2]),
-      color: data[i][3]
+      id: String(values[i][0]),
+      name: String(values[i][1] || values[i][0]),
+      threshold: Number(values[i][2] || 0),
+      color: String(values[i][3] || '#888888')
     });
   }
   return { configs: configs };
 }
 
 function getConfigMap() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('Config');
-  if (!sheet) return {};
+  var response = getConfig();
+  if (response.error || !response.configs) return {};
 
-  var data = sheet.getDataRange().getValues();
   var map = {};
-  for (var i = 1; i < data.length; i++) {
-    map[data[i][0]] = {
-      name: data[i][1],
-      threshold: Number(data[i][2]),
-      color: data[i][3]
+  for (var i = 0; i < response.configs.length; i++) {
+    var cfg = response.configs[i];
+    map[cfg.id] = {
+      name: cfg.name,
+      threshold: cfg.threshold,
+      color: cfg.color
     };
   }
   return map;
 }
 
-// ====== Write Functions ======
-
 function logSensorData(sensorData) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('SensorData');
-  if (!sheet) return { error: 'Sheet "SensorData" not found' };
+  var sheet = getSheetByName(SENSOR_SHEET_NAME);
+  if (!sheet) return { error: 'Sheet "' + SENSOR_SHEET_NAME + '" not found' };
 
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var row = [new Date()];
-  for (var i = 1; i < headers.length; i++) {
-    row.push(sensorData[headers[i]] || 0);
+  for (var col = 1; col < headers.length; col++) {
+    row.push(sensorData[headers[col]] || 0);
   }
   sheet.appendRow(row);
   return { success: true, row: sheet.getLastRow() };
 }
 
 function updateConfig(configArr) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('Config');
-  if (!sheet) return { error: 'Sheet "Config" not found' };
+  var sheet = getSheetByName(CONFIG_SHEET_NAME);
+  if (!sheet) return { error: 'Sheet "' + CONFIG_SHEET_NAME + '" not found' };
 
-  // Clear and rewrite
-  sheet.getRange(2, 1, sheet.getLastRow(), 4).clearContent();
-  for (var i = 0; i < configArr.length; i++) {
-    var c = configArr[i];
-    sheet.getRange(i + 2, 1, 1, 4).setValues([[c.id, c.name, c.threshold, c.color]]);
+  if (sheet.getLastRow() > 1) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).clearContent();
   }
+
+  for (var i = 0; i < configArr.length; i++) {
+    var cfg = configArr[i];
+    sheet.getRange(i + 2, 1, 1, 4).setValues([[
+      cfg.id,
+      cfg.name,
+      cfg.threshold,
+      cfg.color
+    ]]);
+  }
+
   return { success: true };
+}
+
+function getSensorSheetContext() {
+  var sheet = getSheetByName(SENSOR_SHEET_NAME);
+  if (!sheet) {
+    return { error: { error: 'Sheet "' + SENSOR_SHEET_NAME + '" not found' } };
+  }
+
+  var values = sheet.getDataRange().getValues();
+  if (values.length === 0) {
+    return {
+      headers: [],
+      rows: []
+    };
+  }
+
+  return {
+    headers: values[0],
+    rows: values.slice(1)
+  };
+}
+
+function getSheetByName(name) {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  return spreadsheet ? spreadsheet.getSheetByName(name) : null;
+}
+
+function getSelectedSensorColumns(headers, selectedSensors) {
+  var normalizedSelections = {};
+  var hasSelection = selectedSensors && selectedSensors.length > 0;
+
+  if (hasSelection) {
+    for (var i = 0; i < selectedSensors.length; i++) {
+      normalizedSelections[normalizeSensorId(selectedSensors[i])] = true;
+    }
+  }
+
+  var columns = [];
+  for (var col = 1; col < headers.length; col++) {
+    var header = String(headers[col]);
+    var normalizedHeader = normalizeSensorId(header);
+    if (!hasSelection || normalizedSelections[normalizedHeader]) {
+      columns.push({
+        header: normalizedHeader,
+        columnIndex: col
+      });
+    }
+  }
+
+  return columns;
+}
+
+function normalizeSensorId(sensorId) {
+  var text = String(sensorId || '').trim();
+  var match = text.match(/^s0*(\d+)$/i);
+  if (match) {
+    return 's' + Number(match[1]);
+  }
+  return text.toLowerCase();
+}
+
+function getDateRange(startDateStr, endDateStr) {
+  var start = parseDateOnly(startDateStr);
+  var end = parseDateOnly(endDateStr || startDateStr);
+
+  if (!start && !end) {
+    return null;
+  }
+
+  if (!start) start = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 0, 0, 0, 0);
+  if (!end) end = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59, 59, 999);
+
+  start = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0);
+  end = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999);
+
+  return { start: start, end: end };
+}
+
+function parseDateOnly(value) {
+  var text = String(value || '').trim();
+  var match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+function parseTimestamp(value) {
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value;
+  }
+
+  var text = String(value || '').trim();
+  if (!text) return null;
+
+  var match = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (match) {
+    return new Date(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3]),
+      Number(match[4] || 0),
+      Number(match[5] || 0),
+      Number(match[6] || 0),
+      0
+    );
+  }
+
+  var parsed = new Date(text);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function isWithinRange(dateValue, range) {
+  if (!range) return true;
+  var time = dateValue.getTime();
+  return time >= range.start.getTime() && time <= range.end.getTime();
+}
+
+function formatTime(value) {
+  var dateValue = parseTimestamp(value);
+  if (!dateValue) return '--:--';
+  return Utilities.formatDate(dateValue, Session.getScriptTimeZone(), 'HH:mm');
+}
+
+function formatTimestamp(value) {
+  var dateValue = parseTimestamp(value);
+  if (!dateValue) return String(value || '');
+  return Utilities.formatDate(dateValue, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+}
+
+function toNumberOrNull(value) {
+  if (value === '' || value === null || value === undefined) return null;
+  var numberValue = Number(value);
+  return isFinite(numberValue) ? numberValue : null;
+}
+
+function sum(values) {
+  var total = 0;
+  for (var i = 0; i < values.length; i++) {
+    total += Number(values[i] || 0);
+  }
+  return total;
+}
+
+function round1(value) {
+  return Math.round(Number(value || 0) * 10) / 10;
 }
