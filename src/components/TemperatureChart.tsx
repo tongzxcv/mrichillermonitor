@@ -43,7 +43,7 @@ export default function TemperatureChart({ sensors, selectedSensor, onSelectSens
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="time" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} interval="preserveStartEnd" />
-            <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} unit="°C" />
+            <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} unit="°C" domain={['auto', 'auto']} />
             <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} />
             <Legend onClick={(e) => { const id = e.dataKey as string; onSelectSensor(selectedSensor === id ? null : id); }} wrapperStyle={{ fontSize: '11px', cursor: 'pointer' }} />
             {sensors.map(s => (
