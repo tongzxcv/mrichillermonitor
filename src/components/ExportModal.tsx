@@ -17,7 +17,18 @@ interface ExportModalProps {
 }
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function thaiToIso(thaiDate: string): string {
+  // Convert dd/mm/yyyy to yyyy-mm-dd for GAS
+  const parts = thaiDate.split('/');
+  if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  return thaiDate;
 }
 
 function fetchViaJsonp(targetUrl: string): Promise<any> {
