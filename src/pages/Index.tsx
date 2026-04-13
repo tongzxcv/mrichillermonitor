@@ -64,7 +64,7 @@ const Index = () => {
       </div>
       <ThresholdModal open={settingsOpen} onClose={() => setSettingsOpen(false)}
         thresholds={thresholds} onSave={handleSaveThresholds} />
-      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} sensors={sensors} />
+      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} sensors={sensors} dataSource={dataSource} />
       <GasConfigModal open={gasConfigOpen} onClose={() => setGasConfigOpen(false)} onSave={handleGasSave} />
     </div>
   );
