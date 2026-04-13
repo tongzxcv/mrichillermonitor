@@ -17,7 +17,18 @@ interface ExportModalProps {
 }
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function thaiToIso(thaiDate: string): string {
+  // Convert dd/mm/yyyy to yyyy-mm-dd for GAS
+  const parts = thaiDate.split('/');
+  if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  return thaiDate;
 }
 
 function fetchViaJsonp(targetUrl: string): Promise<any> {
@@ -74,8 +85,8 @@ export default function ExportModal({ open, onClose, sensors, dataSource }: Expo
       });
       const params = new URLSearchParams({
         action: 'exportCsv',
-        startDate,
-        endDate,
+        startDate: thaiToIso(startDate),
+        endDate: thaiToIso(endDate),
         sensors: sensorIds.join(','),
       });
       const targetUrl = `${gasUrl}?${params.toString()}`;
@@ -131,13 +142,13 @@ export default function ExportModal({ open, onClose, sensors, dataSource }: Expo
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 flex-1 min-w-[140px]">
             <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">FROM:</span>
-            <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-              className="h-8 text-xs" />
+            <Input type="text" value={startDate} onChange={e => setStartDate(e.target.value)}
+              placeholder="dd/mm/yyyy" className="h-8 text-xs" />
           </div>
           <div className="flex items-center gap-1.5 flex-1 min-w-[140px]">
             <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">TO:</span>
-            <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-              className="h-8 text-xs" />
+            <Input type="text" value={endDate} onChange={e => setEndDate(e.target.value)}
+              placeholder="dd/mm/yyyy" className="h-8 text-xs" />
           </div>
         </div>
 
