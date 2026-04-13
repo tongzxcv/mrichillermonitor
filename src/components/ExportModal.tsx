@@ -142,13 +142,13 @@ export default function ExportModal({ open, onClose, sensors, dataSource }: Expo
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 flex-1 min-w-[140px]">
             <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">FROM:</span>
-            <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-              className="h-8 text-xs" />
+            <Input type="text" value={startDate} onChange={e => setStartDate(e.target.value)}
+              placeholder="dd/mm/yyyy" className="h-8 text-xs" />
           </div>
           <div className="flex items-center gap-1.5 flex-1 min-w-[140px]">
             <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">TO:</span>
-            <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-              className="h-8 text-xs" />
+            <Input type="text" value={endDate} onChange={e => setEndDate(e.target.value)}
+              placeholder="dd/mm/yyyy" className="h-8 text-xs" />
           </div>
         </div>
 
