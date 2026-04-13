@@ -1,14 +1,10 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
 import { SENSOR_CONFIGS } from '@/data/mockSensors';
 import type { SensorReading } from '@/data/mockSensors';
 import { getGasUrl } from '@/services/gasApi';
@@ -18,6 +14,10 @@ interface ExportModalProps {
   onClose: () => void;
   sensors: SensorReading[];
   dataSource: 'mock' | 'gas';
+}
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function fetchViaJsonp(targetUrl: string): Promise<any> {
@@ -37,35 +37,10 @@ function fetchViaJsonp(targetUrl: string): Promise<any> {
   });
 }
 
-function DatePicker({ date, onSelect, label }: { date: Date; onSelect: (d: Date) => void; label: string }) {
-  return (
-    <div className="flex items-center gap-1.5 flex-1 min-w-[160px]">
-      <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">{label}</span>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className={cn("h-8 text-xs justify-start gap-1.5 w-full")}>
-            <CalendarIcon className="h-3.5 w-3.5" />
-            {format(date, 'dd/MM/yyyy')}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={(d) => d && onSelect(d)}
-            initialFocus
-            className={cn("p-3 pointer-events-auto")}
-          />
-        </PopoverContent>
-      </Popover>
-    </div>
-  );
-}
-
 export default function ExportModal({ open, onClose, sensors, dataSource }: ExportModalProps) {
   const [selected, setSelected] = useState<string[]>(SENSOR_CONFIGS.map(s => s.id));
-  const [startDate, setStartDate] = useState<Date>(new Date());
-  const [endDate, setEndDate] = useState<Date>(new Date());
+  const [startDate, setStartDate] = useState(todayStr());
+  const [endDate, setEndDate] = useState(todayStr());
   const [exporting, setExporting] = useState(false);
 
   const allSelected = selected.length === SENSOR_CONFIGS.length;
@@ -78,12 +53,12 @@ export default function ExportModal({ open, onClose, sensors, dataSource }: Expo
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const downloadCsv = (csvContent: string, filename: string) => {
+  const downloadCsv = (csvContent: string) => {
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename;
+    a.download = `chiller_data_${startDate}_to_${endDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -92,14 +67,15 @@ export default function ExportModal({ open, onClose, sensors, dataSource }: Expo
     setExporting(true);
     try {
       const gasUrl = getGasUrl();
+      // Map sensor IDs: s1->S01, s2->S02, etc.
       const sensorIds = selected.map(id => {
         const num = id.replace('s', '');
         return 'S' + num.padStart(2, '0');
       });
       const params = new URLSearchParams({
         action: 'exportCsv',
-        startDate: format(startDate, 'yyyy-MM-dd'),
-        endDate: format(endDate, 'yyyy-MM-dd'),
+        startDate,
+        endDate,
         sensors: sensorIds.join(','),
       });
       const targetUrl = `${gasUrl}?${params.toString()}`;
@@ -107,7 +83,7 @@ export default function ExportModal({ open, onClose, sensors, dataSource }: Expo
       
       if (Array.isArray(data) && data.length > 0) {
         const csv = data.map((row: any[]) => row.join(',')).join('\n');
-        downloadCsv(csv, `chiller_${format(startDate, 'ddMMyyyy')}_to_${format(endDate, 'ddMMyyyy')}.csv`);
+        downloadCsv(csv);
       } else {
         alert('ไม่พบข้อมูลในช่วงวันที่ที่เลือก');
       }
@@ -131,7 +107,7 @@ export default function ExportModal({ open, onClose, sensors, dataSource }: Expo
     }) ?? [];
 
     const csv = [cols.join(','), ...rows.map(r => r.join(','))].join('\n');
-    downloadCsv(csv, `chiller_data_${format(new Date(), 'ddMMyyyy')}.csv`);
+    downloadCsv(csv);
     onClose();
   };
 
@@ -151,22 +127,35 @@ export default function ExportModal({ open, onClose, sensors, dataSource }: Expo
           <DialogDescription>เลือกช่วงวันที่และเซ็นเซอร์ที่ต้องการ</DialogDescription>
         </DialogHeader>
 
-        {/* Date Range with Calendar Picker */}
+        {/* Date Range */}
         <div className="flex items-center gap-2 flex-wrap">
-          <DatePicker date={startDate} onSelect={setStartDate} label="FROM:" />
-          <DatePicker date={endDate} onSelect={setEndDate} label="TO:" />
+          <div className="flex items-center gap-1.5 flex-1 min-w-[140px]">
+            <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">FROM:</span>
+            <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+              className="h-8 text-xs" />
+          </div>
+          <div className="flex items-center gap-1.5 flex-1 min-w-[140px]">
+            <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">TO:</span>
+            <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+              className="h-8 text-xs" />
+          </div>
         </div>
 
-        {/* Select All + Sensor Grid */}
+        {/* Select All */}
         <div className="bg-muted/50 rounded-lg border p-3">
           <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer mb-2 text-primary">
             <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
             เลือกทั้งหมด (Select All)
           </label>
+
+          {/* Sensor Grid */}
           <div className="grid grid-cols-2 gap-1.5">
             {SENSOR_CONFIGS.map(cfg => (
               <label key={cfg.id} className="flex items-center gap-2 text-xs cursor-pointer py-0.5">
-                <Checkbox checked={selected.includes(cfg.id)} onCheckedChange={() => toggle(cfg.id)} />
+                <Checkbox
+                  checked={selected.includes(cfg.id)}
+                  onCheckedChange={() => toggle(cfg.id)}
+                />
                 <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: cfg.color }} />
                 {cfg.name}
               </label>
@@ -177,7 +166,7 @@ export default function ExportModal({ open, onClose, sensors, dataSource }: Expo
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
           <Button size="sm" onClick={handleExport} disabled={selected.length === 0 || exporting}>
-            {exporting ? '⏳ Exporting...' : '📥 Export'}
+            {exporting ? '⏳ Exporting...' : `📥 Export`}
           </Button>
         </DialogFooter>
       </DialogContent>
