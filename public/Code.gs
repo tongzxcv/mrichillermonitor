@@ -21,6 +21,7 @@
 
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'latest';
+  var callback = (e && e.parameter && e.parameter.callback) || '';
 
   var result;
   switch (action) {
@@ -34,12 +35,25 @@ function doGet(e) {
     case 'config':
       result = getConfig();
       break;
+    case 'exportCsv':
+      var startDate = (e.parameter && e.parameter.startDate) || '';
+      var endDate = (e.parameter && e.parameter.endDate) || '';
+      var sensorsParam = (e.parameter && e.parameter.sensors) || '';
+      var selectedSensors = sensorsParam ? sensorsParam.split(',') : [];
+      result = getExportData(startDate, endDate, selectedSensors);
+      break;
     default:
       result = { error: 'Unknown action: ' + action };
   }
 
+  var json = JSON.stringify(result);
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + '(' + json + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   return ContentService
-    .createTextOutput(JSON.stringify(result))
+    .createTextOutput(json)
     .setMimeType(ContentService.MimeType.JSON);
 }
 
