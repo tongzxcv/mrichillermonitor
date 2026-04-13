@@ -85,8 +85,8 @@ export default function ExportModal({ open, onClose, sensors, dataSource }: Expo
       });
       const params = new URLSearchParams({
         action: 'exportCsv',
-        startDate,
-        endDate,
+        startDate: thaiToIso(startDate),
+        endDate: thaiToIso(endDate),
         sensors: sensorIds.join(','),
       });
       const targetUrl = `${gasUrl}?${params.toString()}`;
