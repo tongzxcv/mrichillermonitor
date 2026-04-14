@@ -74,7 +74,7 @@ const handleReboot = async () => {
         onToggleSound={() => setSoundEnabled(!soundEnabled)}
         refreshInterval={refreshInterval} onIntervalChange={setRefreshInterval}
         onOpenSettings={() => setSettingsOpen(true)} onOpenExport={() => setExportOpen(true)}
-        onOpenGasConfig={() => setGasConfigOpen(true)} onReboot={handleReboot}
+        onReboot={handleReboot}
         dataSource={dataSource} loading={loading} />
       {error && <div className="text-xs text-destructive bg-destructive/10 rounded-md px-3 py-2">⚠️ GAS Error: {error} — ใช้ mock data แทน</div>}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
