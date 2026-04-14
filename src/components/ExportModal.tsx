@@ -50,7 +50,7 @@ function fetchViaJsonp(targetUrl: string): Promise<unknown> {
       if (script.parentNode) script.parentNode.removeChild(script);
     }
 
-    (window as Window & Record<string, unknown>)[cbName] = (data: unknown) => {
+    (window as unknown as Record<string, unknown>)[cbName] = (data: unknown) => {
       cleanup();
       resolve(data);
     };
