@@ -23,6 +23,7 @@ const Index = () => {
     soundEnabled, setSoundEnabled,
     thresholds, updateThreshold, refresh,
     dataSource, loading, error, checkDataSource,
+    clearAlerts,
   } = useSensorData(refreshInterval);
 
 const handleReboot = async () => {
@@ -89,7 +90,8 @@ const handleReboot = async () => {
         </div>
         <div>
           <AlertsPanel alerts={alerts} soundEnabled={soundEnabled}
-            onToggleSound={() => setSoundEnabled(!soundEnabled)} />
+            onToggleSound={() => setSoundEnabled(!soundEnabled)}
+            onClearAlerts={clearAlerts} />
         </div>
       </div>
       <ThresholdModal open={settingsOpen} onClose={() => setSettingsOpen(false)}
