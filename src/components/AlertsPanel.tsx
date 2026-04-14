@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Volume2, VolumeX } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { AlertEntry } from '@/data/mockSensors';
 
 interface AlertsPanelProps {
@@ -20,7 +20,7 @@ export default function AlertsPanel({ alerts, soundEnabled, onToggleSound, onCle
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold">🔔 Recent Alerts ({alerts.length})</h2>
+        <h2 className="text-sm font-semibold">Recent Alerts ({alerts.length})</h2>
         <div className="flex items-center gap-2">
           {alerts.length > 0 && (
             <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={onClearAlerts}>
@@ -39,58 +39,62 @@ export default function AlertsPanel({ alerts, soundEnabled, onToggleSound, onCle
       </div>
 
       {displayed.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-6">✅ No alerts — all sensors normal</p>
+        <p className="text-sm text-muted-foreground text-center py-6">No alerts - all sensors normal</p>
       ) : (
-        <div className="overflow-auto max-h-64">
-          {/* Table for md+ */}
-          <Table className="hidden md:table">
+        <div className="max-h-64 overflow-y-auto overflow-x-hidden">
+          <Table className="hidden md:table table-fixed w-full">
             <TableHeader>
               <TableRow>
-                <TableHead className="text-xs">Time</TableHead>
-                <TableHead className="text-xs">Sensor</TableHead>
-                <TableHead className="text-xs">Value</TableHead>
-                <TableHead className="text-xs">Threshold</TableHead>
-                <TableHead className="text-xs">Severity</TableHead>
+                <TableHead className="text-xs w-[42%]">Sensor</TableHead>
+                <TableHead className="text-xs w-[22%]">Value</TableHead>
+                <TableHead className="text-xs w-[36%]">Severity</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {displayed.map(a => (
+              {displayed.map(alert => (
                 <TableRow
-                  key={a.id}
-                  className={a.severity === 'critical' ? 'animate-blink bg-destructive/10' : ''}
+                  key={alert.id}
+                  className={alert.severity === 'critical' ? 'animate-blink bg-destructive/10' : ''}
                 >
-                  <TableCell className="text-xs">{a.time}</TableCell>
-                  <TableCell className="text-xs font-medium">{a.sensor}</TableCell>
-                  <TableCell className="text-xs">{a.value.toFixed(1)}°C</TableCell>
-                  <TableCell className="text-xs">{a.threshold}°C</TableCell>
+                  <TableCell className="text-xs font-medium whitespace-normal break-words leading-snug">
+                    {alert.sensor}
+                  </TableCell>
+                  <TableCell className="text-xs whitespace-nowrap">{alert.value.toFixed(1)}°C</TableCell>
                   <TableCell>
                     <Badge
-                      variant={a.severity === 'critical' ? 'destructive' : 'secondary'}
+                      variant={alert.severity === 'critical' ? 'destructive' : 'secondary'}
                       className="text-[10px]"
                     >
-                      {a.severity}
+                      {alert.severity}
                     </Badge>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          {/* Card list for mobile */}
+
           <div className="md:hidden space-y-2">
-            {displayed.map(a => (
+            {displayed.map(alert => (
               <div
-                key={a.id}
-                className={`rounded-md border p-2 text-[11px] space-y-0.5 ${a.severity === 'critical' ? 'animate-blink bg-destructive/10 border-destructive/30' : 'border-border'}`}
+                key={alert.id}
+                className={`rounded-md border p-2 text-[11px] space-y-1 ${
+                  alert.severity === 'critical'
+                    ? 'animate-blink bg-destructive/10 border-destructive/30'
+                    : 'border-border'
+                }`}
               >
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">{a.sensor}</span>
-                  <Badge variant={a.severity === 'critical' ? 'destructive' : 'secondary'} className="text-[9px] px-1 py-0">
-                    {a.severity}
+                <div className="flex justify-between items-center gap-2">
+                  <span className="font-medium leading-snug">{alert.sensor}</span>
+                  <Badge
+                    variant={alert.severity === 'critical' ? 'destructive' : 'secondary'}
+                    className="text-[9px] px-1 py-0 shrink-0"
+                  >
+                    {alert.severity}
                   </Badge>
                 </div>
-                <div className="text-muted-foreground flex gap-2">
-                  <span>{a.time}</span>
-                  <span>{a.value.toFixed(1)}°C / {a.threshold}°C</span>
+                <div className="text-muted-foreground flex items-center justify-between gap-2">
+                  <span>{alert.time}</span>
+                  <span>{alert.value.toFixed(1)}°C</span>
                 </div>
               </div>
             ))}
