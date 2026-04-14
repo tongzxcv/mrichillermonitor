@@ -46,7 +46,7 @@ function fetchViaJsonp(targetUrl: string): Promise<unknown> {
 
     function cleanup() {
       clearTimeout(timeout);
-      delete (window as Window & Record<string, unknown>)[cbName];
+      delete (window as unknown as Record<string, unknown>)[cbName];
       if (script.parentNode) script.parentNode.removeChild(script);
     }
 
