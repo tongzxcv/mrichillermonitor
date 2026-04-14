@@ -18,20 +18,25 @@ export default function AlertsPanel({ alerts, soundEnabled, onToggleSound, onCle
   const displayed = showAll ? alerts : alerts.slice(0, 5);
 
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold">Recent Alerts ({alerts.length})</h2>
-        <div className="flex items-center gap-2">
+    <Card className="p-4 tv:p-6">
+      <div className="flex items-center justify-between mb-3 tv:mb-4">
+        <h2 className="text-sm tv:text-xl font-semibold">Recent Alerts ({alerts.length})</h2>
+        <div className="flex items-center gap-2 tv:gap-3">
           {alerts.length > 0 && (
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={onClearAlerts}>
-              🗑️ Clear
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 tv:h-10 text-xs tv:text-sm text-destructive hover:text-destructive"
+              onClick={onClearAlerts}
+            >
+              Clear
             </Button>
           )}
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onToggleSound}>
-            {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+          <Button variant="ghost" size="icon" className="h-7 w-7 tv:h-10 tv:w-10" onClick={onToggleSound}>
+            {soundEnabled ? <Volume2 className="h-3.5 w-3.5 tv:h-4.5 tv:w-4.5" /> : <VolumeX className="h-3.5 w-3.5 tv:h-4.5 tv:w-4.5" />}
           </Button>
           {alerts.length > 5 && (
-            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setShowAll(!showAll)}>
+            <Button variant="outline" size="sm" className="h-7 tv:h-10 text-xs tv:text-sm" onClick={() => setShowAll(!showAll)}>
               {showAll ? 'Show Less' : `View All (${alerts.length})`}
             </Button>
           )}
@@ -39,32 +44,26 @@ export default function AlertsPanel({ alerts, soundEnabled, onToggleSound, onCle
       </div>
 
       {displayed.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-6">No alerts - all sensors normal</p>
+        <p className="text-sm tv:text-base text-muted-foreground text-center py-6 tv:py-10">No alerts - all sensors normal</p>
       ) : (
-        <div className="max-h-64 overflow-y-auto overflow-x-hidden">
+        <div className="max-h-64 tv:max-h-[420px] overflow-y-auto overflow-x-hidden">
           <Table className="hidden md:table table-fixed w-full">
             <TableHeader>
               <TableRow>
-                <TableHead className="text-xs w-[42%]">Sensor</TableHead>
-                <TableHead className="text-xs w-[22%]">Value</TableHead>
-                <TableHead className="text-xs w-[36%]">Severity</TableHead>
+                <TableHead className="text-xs tv:text-sm w-[42%]">Sensor</TableHead>
+                <TableHead className="text-xs tv:text-sm w-[22%]">Value</TableHead>
+                <TableHead className="text-xs tv:text-sm w-[36%]">Severity</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {displayed.map(alert => (
-                <TableRow
-                  key={alert.id}
-                  className={alert.severity === 'critical' ? 'animate-blink bg-destructive/10' : ''}
-                >
-                  <TableCell className="text-xs font-medium whitespace-normal break-words leading-snug">
+                <TableRow key={alert.id} className={alert.severity === 'critical' ? 'animate-blink bg-destructive/10' : ''}>
+                  <TableCell className="text-xs tv:text-sm font-medium whitespace-normal break-words leading-snug">
                     {alert.sensor}
                   </TableCell>
-                  <TableCell className="text-xs whitespace-nowrap">{alert.value.toFixed(1)}°C</TableCell>
+                  <TableCell className="text-xs tv:text-sm whitespace-nowrap">{alert.value.toFixed(1)}°C</TableCell>
                   <TableCell>
-                    <Badge
-                      variant={alert.severity === 'critical' ? 'destructive' : 'secondary'}
-                      className="text-[10px]"
-                    >
+                    <Badge variant={alert.severity === 'critical' ? 'destructive' : 'secondary'} className="text-[10px] tv:text-xs">
                       {alert.severity}
                     </Badge>
                   </TableCell>

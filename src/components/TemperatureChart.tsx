@@ -4,8 +4,8 @@ import {
 } from 'recharts';
 import { Card } from '@/components/ui/card';
 import type { SensorReading } from '@/data/mockSensors';
-import type { ChartData } from '@/hooks/useSensorData';
 import { SENSOR_CONFIGS } from '@/data/mockSensors';
+import type { ChartData } from '@/hooks/useSensorData';
 
 interface TemperatureChartProps {
   sensors: SensorReading[];
@@ -20,6 +20,8 @@ export default function TemperatureChart({
   onSelectSensor,
   chartData: extChartData,
 }: TemperatureChartProps) {
+  const isTv = typeof window !== 'undefined' && window.innerWidth >= 1920;
+
   const chartData = useMemo(() => {
     if (extChartData && extChartData.labels.length > 0) {
       return extChartData.labels.map((time, index) => {
@@ -75,19 +77,19 @@ export default function TemperatureChart({
   }, [chartData, selectedSensor, sensors]);
 
   return (
-    <Card className="p-4 bg-card">
-      <h2 className="text-sm font-semibold mb-3">Temperature Trend</h2>
-      <div className="rounded-lg bg-foreground/[0.03] p-3">
-        <ResponsiveContainer width="100%" height={260} className="md:!h-[320px]">
+    <Card className="p-4 tv:p-6 bg-card">
+      <h2 className="text-sm tv:text-xl font-semibold mb-3 tv:mb-4">Temperature Trend</h2>
+      <div className="rounded-lg bg-foreground/[0.03] p-3 tv:p-5">
+        <ResponsiveContainer width="100%" height={260} className="md:!h-[320px] tv:!h-[440px]">
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis
               dataKey="time"
-              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: isTv ? 14 : 11, fill: 'hsl(var(--muted-foreground))' }}
               interval="preserveStartEnd"
             />
             <YAxis
-              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: isTv ? 14 : 11, fill: 'hsl(var(--muted-foreground))' }}
               unit="°C"
               domain={yAxisDomain}
             />
@@ -96,7 +98,7 @@ export default function TemperatureChart({
                 backgroundColor: 'hsl(var(--card))',
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '8px',
-                fontSize: '12px',
+                fontSize: isTv ? '14px' : '12px',
               }}
             />
             <Legend
@@ -104,7 +106,7 @@ export default function TemperatureChart({
                 const id = event.dataKey as string;
                 onSelectSensor(selectedSensor === id ? null : id);
               }}
-              wrapperStyle={{ fontSize: '11px', cursor: 'pointer' }}
+              wrapperStyle={{ fontSize: isTv ? '13px' : '11px', cursor: 'pointer' }}
             />
             {sensors.map(sensor => (
               <Line
@@ -113,10 +115,10 @@ export default function TemperatureChart({
                 dataKey={sensor.id}
                 name={sensor.name}
                 stroke={sensor.color}
-                strokeWidth={selectedSensor === null || selectedSensor === sensor.id ? 2 : 0.5}
+                strokeWidth={selectedSensor === null || selectedSensor === sensor.id ? (isTv ? 2.6 : 2) : 0.5}
                 opacity={selectedSensor === null || selectedSensor === sensor.id ? 1 : 0.2}
                 dot={false}
-                activeDot={{ r: 4 }}
+                activeDot={{ r: isTv ? 5 : 4 }}
                 connectNulls={false}
               />
             ))}
