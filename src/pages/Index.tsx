@@ -24,10 +24,22 @@ const Index = () => {
     dataSource, loading, error, checkDataSource,
   } = useSensorData(refreshInterval);
 
-  const handleReboot = () => {
-    toast({ title: '🔄 Rebooting...', description: 'ระบบกำลัง reboot (demo mode)' });
+  const handleReboot = async () => {
+  const url = getGasUrl();  // import จาก gasApi
+  if (!url) {
+    toast({ title: '❌ Error', description: 'ยังไม่ได้ตั้งค่า GAS URL' });
+    return;
+  }
+  try {
+    toast({ title: '⏳ กำลังส่งคำสั่ง...', description: 'กำลัง reboot ทุก Board' });
+    await fetch(`${url}?action=reboot&callback=cb`, { mode: 'no-cors' });
+    toast({ title: '✅ Reboot สำเร็จ', description: 'ส่งคำสั่ง REBOOT ไปยังทุก Board แล้ว ESP จะ reboot รอบถัดไป' });
     refresh();
+  } catch (e) {
+    toast({ title: '❌ Reboot ล้มเหลว', description: 'ไม่สามารถเชื่อมต่อ GAS ได้' });
+  }
   };
+  
   const handleSaveThresholds = (newThresholds: Record<string, number>) => {
     Object.entries(newThresholds).forEach(([id, val]) => updateThreshold(id, val));
     toast({ title: '✅ บันทึกเรียบร้อย', description: 'Threshold settings updated' });
