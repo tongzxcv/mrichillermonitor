@@ -1,3 +1,4 @@
+import { getGasUrl } from '@/services/gasApi';
 import { useState } from 'react';
 import { useSensorData } from '@/hooks/useSensorData';
 import TopBar from '@/components/TopBar';
@@ -24,21 +25,38 @@ const Index = () => {
     dataSource, loading, error, checkDataSource,
   } = useSensorData(refreshInterval);
 
-  const handleReboot = async () => {
-  const url = getGasUrl();  // import จาก gasApi
+const handleReboot = async () => {
+  const url = getGasUrl();
   if (!url) {
     toast({ title: '❌ Error', description: 'ยังไม่ได้ตั้งค่า GAS URL' });
     return;
   }
   try {
     toast({ title: '⏳ กำลังส่งคำสั่ง...', description: 'กำลัง reboot ทุก Board' });
-    await fetch(`${url}?action=reboot&callback=cb`, { mode: 'no-cors' });
-    toast({ title: '✅ Reboot สำเร็จ', description: 'ส่งคำสั่ง REBOOT ไปยังทุก Board แล้ว ESP จะ reboot รอบถัดไป' });
+    // ใช้ JSONP แทน fetch เพราะ GAS ไม่รองรับ CORS
+    await new Promise<void>((resolve) => {
+      const cbName = 'rebootCb_' + Date.now();
+      const script = document.createElement('script');
+      const timeout = setTimeout(() => {
+        delete (window as any)[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        resolve(); // timeout แต่ GAS อาจทำงานแล้ว
+      }, 10000);
+      (window as any)[cbName] = () => {
+        clearTimeout(timeout);
+        delete (window as any)[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        resolve();
+      };
+      script.src = `${url}?action=reboot&callback=${cbName}`;
+      document.head.appendChild(script);
+    });
+    toast({ title: '✅ Reboot สำเร็จ', description: 'ส่งคำสั่ง REBOOT แล้ว ESP จะ reboot รอบถัดไป' });
     refresh();
   } catch (e) {
     toast({ title: '❌ Reboot ล้มเหลว', description: 'ไม่สามารถเชื่อมต่อ GAS ได้' });
   }
-  };
+};
   
   const handleSaveThresholds = (newThresholds: Record<string, number>) => {
     Object.entries(newThresholds).forEach(([id, val]) => updateThreshold(id, val));
