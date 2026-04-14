@@ -14,7 +14,6 @@ interface TopBarProps {
   onIntervalChange: (val: number) => void;
   onOpenSettings: () => void;
   onOpenExport: () => void;
-  onOpenGasConfig: () => void;
   onReboot: () => void;
   dataSource: 'mock' | 'gas';
   loading: boolean;
