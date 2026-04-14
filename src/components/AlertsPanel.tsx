@@ -10,9 +10,10 @@ interface AlertsPanelProps {
   alerts: AlertEntry[];
   soundEnabled: boolean;
   onToggleSound: () => void;
+  onClearAlerts: () => void;
 }
 
-export default function AlertsPanel({ alerts, soundEnabled, onToggleSound }: AlertsPanelProps) {
+export default function AlertsPanel({ alerts, soundEnabled, onToggleSound, onClearAlerts }: AlertsPanelProps) {
   const [showAll, setShowAll] = useState(false);
   const displayed = showAll ? alerts : alerts.slice(0, 5);
 
@@ -21,6 +22,11 @@ export default function AlertsPanel({ alerts, soundEnabled, onToggleSound }: Ale
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold">🔔 Recent Alerts ({alerts.length})</h2>
         <div className="flex items-center gap-2">
+          {alerts.length > 0 && (
+            <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={onClearAlerts}>
+              🗑️ Clear
+            </Button>
+          )}
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onToggleSound}>
             {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
           </Button>
