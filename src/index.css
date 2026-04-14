@@ -99,7 +99,7 @@
 }
 
 .animate-blink {
-  animation: blink-critical 1.5s ease-in-out infinite;
+  animation: blink-critical 2.2s ease-in-out infinite;
 }
 
 @keyframes pulse-live {
