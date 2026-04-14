@@ -69,7 +69,7 @@ const handleReboot = async () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6 tv:px-10 tv:py-8 space-y-4 tv:space-y-6 max-w-[1600px] tv:max-w-[1880px] tv-xl:max-w-[2280px] mx-auto">
+    <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 max-w-[1600px] mx-auto">
       <TopBar lastUpdated={lastUpdated} wifi={wifi} soundEnabled={soundEnabled}
         onToggleSound={() => setSoundEnabled(!soundEnabled)}
         refreshInterval={refreshInterval} onIntervalChange={setRefreshInterval}
@@ -77,13 +77,13 @@ const handleReboot = async () => {
         onOpenGasConfig={() => setGasConfigOpen(true)} onReboot={handleReboot}
         dataSource={dataSource} loading={loading} />
       {error && <div className="text-xs text-destructive bg-destructive/10 rounded-md px-3 py-2">⚠️ GAS Error: {error} — ใช้ mock data แทน</div>}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 tv:grid-cols-5 gap-3 tv:gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
         {sensors.map(s => (
           <SensorCard key={s.id} sensor={s} isSelected={selectedSensor === s.id}
             onClick={() => setSelectedSensor(selectedSensor === s.id ? null : s.id)} />
         ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 tv:gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-3">
           <TemperatureChart sensors={sensors} selectedSensor={selectedSensor}
             onSelectSensor={setSelectedSensor} chartData={chartData} />

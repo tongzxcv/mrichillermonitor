@@ -91,22 +91,6 @@
     @apply bg-background text-foreground;
     font-family: 'Plus Jakarta Sans', sans-serif;
   }
-
-  @media (min-width: 1920px) {
-    html {
-      font-size: 18px;
-    }
-
-    body {
-      letter-spacing: 0.01em;
-    }
-  }
-
-  @media (min-width: 2400px) {
-    html {
-      font-size: 20px;
-    }
-  }
 }
 
 @keyframes blink-critical {
