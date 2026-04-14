@@ -189,9 +189,14 @@ export function useSensorData(refreshInterval: number) {
         setThresholds(prev => ({ ...prev, [sensorId]: value }));
   }, []);
 
+  const clearAlerts = useCallback(() => {
+    setAlerts([]);
+  }, []);
+
   return {
-        sensors,
-        alerts,
+    sensors,
+    alerts,
+    clearAlerts,
         wifi,
         chartData,
         lastUpdated,
