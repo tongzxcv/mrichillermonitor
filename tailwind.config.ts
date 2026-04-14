@@ -88,9 +88,9 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "card-blink": "card-blink 1.4s ease-in-out infinite",
-        "temp-blink": "temp-blink 1.4s ease-in-out infinite",
-        "critical-badge": "critical-badge 1.8s ease-in-out infinite",
+        "card-blink": "card-blink 2.2s ease-in-out infinite",
+        "temp-blink": "temp-blink 2.2s ease-in-out infinite",
+        "critical-badge": "critical-badge 2.2s ease-in-out infinite",
       },
     },
   },
