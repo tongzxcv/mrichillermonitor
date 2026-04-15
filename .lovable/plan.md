@@ -1,30 +1,52 @@
 
 
-## Plan: Fix Build Errors + Adjust Mock Data + Add History Page
+## Plan: Sidebar + TV Mode + Dark Mode (Updated)
 
-ตัวเลือกก่อนหน้ามี 4 ข้อ (ไม่มีข้อ 5) ผมจะทำข้อ 1 และ 4 ให้ก่อน:
+ตัดออก: Reboot Log page, GAS Config (ฝังโค้ดอยู่แล้ว)
 
-### Task 1: Fix chart.tsx Build Errors + Adjust Mock Data
+### 1. Fix Build Error
+Remove `onOpenGasConfig` from TopBar.tsx line 54 (not in props interface).
 
-**Problem**: `chart.tsx` (shadcn/ui) ใช้ types สำหรับ recharts v2 แต่โปรเจคใช้ recharts v3.8.1 ซึ่ง type definitions เปลี่ยน
+### 2. Dark Mode + TV Mode Hooks
+- `src/hooks/useTheme.ts` — toggle `.dark` class on `<html>`, persist to localStorage
+- `src/hooks/useTvMode.ts` — toggle TV mode class, larger fonts/cards, auto-hide cursor, persist to localStorage
 
-**Fix**:
-- แก้ `ChartTooltipContent` props type: ใช้ `any` หรือ explicit interface แทน `React.ComponentProps<typeof Tooltip>` ที่ไม่ compatible กับ v3
-- แก้ `ChartLegendContent` props type: `Pick<LegendProps, "payload" | "verticalAlign">` ไม่ valid ใน v3 → ใช้ explicit types แทน
-- ปรับ `SENSOR_BASES` ใน `mockSensors.ts` ให้บาง sensor อยู่ต่ำกว่า threshold เพื่อแสดง Normal status
+### 3. Sidebar Navigation
+Create `src/components/AppSidebar.tsx` using shadcn Sidebar component with:
+- **Dashboard** (/) — main view
+- **History** (/history) — existing page
+- **Alarm History** (/alarm-history) — new page
+- **Export Data** — opens export modal
+- **Settings** — opens threshold modal
+- Toggles section: Dark Mode switch, TV Mode switch
 
-### Task 2: Add History Page
+Slim down TopBar: remove History link, Settings, Reboot → move to sidebar. Keep title, live status, WiFi, sound, refresh interval.
 
-- สร้าง `/history` page ใหม่สำหรับดูข้อมูลย้อนหลัง
-- เพิ่ม date picker เลือกวัน
-- แสดงกราฟ temperature ย้อนหลัง (mock data daily/weekly)
-- เพิ่ม navigation link ใน TopBar
-- เพิ่ม route ใน App.tsx
+### 4. Alarm History Page
+`src/pages/AlarmHistory.tsx` — table of past alerts with date filter (uses alerts from useSensorData or localStorage-persisted log).
+
+### 5. TV Mode Layout
+When TV mode is active:
+- Hide sidebar
+- Remove max-width constraint and reduce padding
+- Increase sensor card font sizes and chart height
+- Auto-hide cursor after 3s inactivity
+- Add floating small toggle button to exit TV mode
+
+### 6. Wire Up
+- `src/App.tsx` — add /alarm-history route, wrap layout with SidebarProvider
+- `src/pages/Index.tsx` — integrate sidebar, theme, TV mode
+- `src/index.css` — add TV mode utility classes
+
+### Files to create:
+- `src/hooks/useTheme.ts`
+- `src/hooks/useTvMode.ts`
+- `src/components/AppSidebar.tsx`
+- `src/pages/AlarmHistory.tsx`
 
 ### Files to modify:
-- `src/components/ui/chart.tsx` — fix recharts v3 type errors
-- `src/data/mockSensors.ts` — adjust SENSOR_BASES for realistic values
-- `src/pages/History.tsx` — new history page
-- `src/App.tsx` — add route
-- `src/components/TopBar.tsx` — add navigation link
+- `src/components/TopBar.tsx` — fix build error, slim down
+- `src/pages/Index.tsx` — sidebar layout, TV mode classes
+- `src/App.tsx` — new routes, SidebarProvider
+- `src/index.css` — TV mode styles
 
