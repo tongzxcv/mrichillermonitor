@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, History, Bell, Download, Settings, Monitor, Moon, Sun, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, Bell, Download, Settings, Monitor, Moon, Sun, RefreshCw } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -41,7 +41,6 @@ interface AppSidebarProps {
 
 const navItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
-  { title: 'History', url: '/history', icon: History },
   { title: 'Alarm History', url: '/alarm-history', icon: Bell },
 ];
 
