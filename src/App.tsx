@@ -12,7 +12,7 @@ import History from "./pages/History.tsx";
 import AlarmHistory from "./pages/AlarmHistory.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { useState, createContext, useContext } from "react";
-import { getGasUrl } from "@/services/gasApi";
+import { triggerRebootAll } from "@/services/gasApi";
 import { useToast } from "@/hooks/use-toast";
 
 const queryClient = new QueryClient();
@@ -22,6 +22,9 @@ interface ModalContextType {
   setSettingsOpen: (v: boolean) => void;
   exportOpen: boolean;
   setExportOpen: (v: boolean) => void;
+  tvMode: boolean;
+  toggleTvMode: () => void;
+  rebootAll: () => Promise<void>;
 }
 
 export const ModalContext = createContext<ModalContextType>({
@@ -29,6 +32,9 @@ export const ModalContext = createContext<ModalContextType>({
   setSettingsOpen: () => {},
   exportOpen: false,
   setExportOpen: () => {},
+  tvMode: false,
+  toggleTvMode: () => {},
+  rebootAll: async () => {},
 });
 
 export const useModalContext = () => useContext(ModalContext);
@@ -40,30 +46,43 @@ function AppLayout() {
   const [exportOpen, setExportOpen] = useState(false);
   const { toast } = useToast();
 
-  const handleReboot = () => {
-    const url = getGasUrl();
-    if (!url) {
-      toast({ title: 'Error', description: 'GAS URL not set' });
-      return;
+  const handleReboot = async () => {
+    try {
+      toast({ title: "Sending reboot...", description: "Rebooting all boards" });
+      await triggerRebootAll();
+      toast({ title: "Reboot sent", description: "ESP will reboot on next cycle" });
+    } catch (error) {
+      toast({
+        title: "Reboot failed",
+        description: error instanceof Error ? error.message : "Cannot connect to GAS",
+        variant: "destructive",
+      });
     }
-    toast({ title: 'Sending Reboot...' });
   };
 
   return (
-    <ModalContext.Provider value={{ settingsOpen, setSettingsOpen, exportOpen, setExportOpen }}>
-      <SidebarProvider>
+    <ModalContext.Provider
+      value={{
+        settingsOpen,
+        setSettingsOpen,
+        exportOpen,
+        setExportOpen,
+        tvMode,
+        toggleTvMode,
+        rebootAll: handleReboot,
+      }}
+    >
+      <SidebarProvider defaultOpen={false}>
         <div className="min-h-screen flex w-full">
-          {!tvMode && (
-            <AppSidebar
-              isDark={isDark}
-              onToggleTheme={toggleTheme}
-              tvMode={tvMode}
-              onToggleTvMode={toggleTvMode}
-              onOpenSettings={() => setSettingsOpen(true)}
-              onOpenExport={() => setExportOpen(true)}
-              onReboot={handleReboot}
-            />
-          )}
+          <AppSidebar
+            isDark={isDark}
+            onToggleTheme={toggleTheme}
+            tvMode={tvMode}
+            onToggleTvMode={toggleTvMode}
+            onOpenSettings={() => setSettingsOpen(true)}
+            onOpenExport={() => setExportOpen(true)}
+            onReboot={handleReboot}
+          />
           <div className="flex-1 flex flex-col min-w-0">
             <main className="flex-1">
               <Routes>

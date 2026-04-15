@@ -1,12 +1,12 @@
 import { LayoutDashboard, History, Bell, Download, Settings, Monitor, Moon, Sun, RefreshCw } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
-import { useLocation } from 'react-router-dom';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import {
   Sidebar,
   SidebarContent,
+  SidebarHeader,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -14,6 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
+  SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
 
@@ -24,7 +25,7 @@ interface AppSidebarProps {
   onToggleTvMode: () => void;
   onOpenSettings: () => void;
   onOpenExport: () => void;
-  onReboot: () => void;
+  onReboot: () => void | Promise<void>;
 }
 
 const navItems = [
@@ -42,12 +43,36 @@ export function AppSidebar({
   onOpenExport,
   onReboot,
 }: AppSidebarProps) {
-  const { state } = useSidebar();
+  const { state, isMobile, setOpen, setOpenMobile } = useSidebar();
   const collapsed = state === 'collapsed';
-  const location = useLocation();
+
+  const closeSidebar = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+      return;
+    }
+    setOpen(false);
+  };
+
+  const handleAction = (action: () => void | Promise<void>) => () => {
+    void Promise.resolve(action()).finally(closeSidebar);
+  };
+
+  const handleTvModeChange = (checked: boolean) => {
+    if (checked !== tvMode) {
+      onToggleTvMode();
+    }
+    closeSidebar();
+  };
 
   return (
     <Sidebar collapsible="icon">
+      <SidebarHeader className="border-b border-sidebar-border p-2">
+        <div className="flex items-center justify-between">
+          <SidebarTrigger className="h-8 w-8 shrink-0" />
+          {!collapsed && <span className="text-sm font-semibold">Menu</span>}
+        </div>
+      </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
@@ -77,19 +102,19 @@ export function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={onOpenSettings}>
+                <SidebarMenuButton onClick={handleAction(onOpenSettings)}>
                   <Settings className="mr-2 h-4 w-4 shrink-0" />
                   {!collapsed && <span>Settings</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={onOpenExport}>
+                <SidebarMenuButton onClick={handleAction(onOpenExport)}>
                   <Download className="mr-2 h-4 w-4 shrink-0" />
                   {!collapsed && <span>Export Data</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={onReboot}>
+                <SidebarMenuButton onClick={handleAction(onReboot)}>
                   <RefreshCw className="mr-2 h-4 w-4 shrink-0" />
                   {!collapsed && <span>Reboot All</span>}
                 </SidebarMenuButton>
@@ -114,7 +139,7 @@ export function AppSidebar({
               <Monitor className="h-3.5 w-3.5" />
               TV Mode
             </Label>
-            <Switch id="tv-mode" checked={tvMode} onCheckedChange={onToggleTvMode} className="scale-90" />
+            <Switch id="tv-mode" checked={tvMode} onCheckedChange={handleTvModeChange} className="scale-90" />
           </div>
         </SidebarFooter>
       )}

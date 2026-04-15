@@ -53,7 +53,8 @@ function fetchViaJsonp(targetUrl: string): Promise<any> {
                   cleanup();
                   resolve(data);
           };
-          script.src = `${targetUrl}&callback=${cbName}`;
+          const separator = targetUrl.includes('?') ? '&' : '?';
+          script.src = `${targetUrl}${separator}callback=${cbName}`;
           script.onerror = () => {
                   cleanup();
                   reject(new Error('JSONP script error'));
@@ -157,4 +158,48 @@ export async function checkGasConnection(url: string): Promise<{ ok: boolean; me
     } catch (e: any) {
           return { ok: false, message: e.message || 'Connection failed' };
     }
+}
+
+function isSuccessfulActionResponse(data: any): boolean {
+    if (data === true) return true;
+
+    if (typeof data === 'string') {
+          const text = data.trim().toLowerCase();
+          return text === 'ok' || text === 'success' || text.includes('reboot');
+    }
+
+    if (!data || typeof data !== 'object' || data.error) {
+          return false;
+    }
+
+    return data.success === true
+      || data.ok === true
+      || String(data.status || '').toLowerCase() === 'ok'
+      || String(data.result || '').toLowerCase() === 'ok'
+      || String(data.message || '').toLowerCase().includes('reboot');
+}
+
+export async function triggerRebootAll(): Promise<void> {
+    const url = getGasUrl();
+    if (!url) throw new Error('GAS URL not configured');
+
+    const actionUrls = [
+      `${url}?action=reboot`,
+      `${url}?action=setRebootCommand`,
+    ];
+
+    let lastError: Error | null = null;
+
+    for (const actionUrl of actionUrls) {
+      try {
+        const response = await fetchViaJsonp(actionUrl);
+        if (isSuccessfulActionResponse(response)) {
+          return;
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Unknown GAS error');
+      }
+    }
+
+    throw lastError ?? new Error('Current GAS deployment does not support reboot yet');
 }

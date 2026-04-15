@@ -1,8 +1,9 @@
-import { Wifi, Volume2, VolumeX, Menu, Monitor } from 'lucide-react';
+import { Wifi, Volume2, VolumeX, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { WifiBoard } from '@/data/mockSensors';
 
 interface TopBarProps {
@@ -53,12 +54,14 @@ export default function TopBar({
   tvMode,
   onExitTvMode,
 }: TopBarProps) {
+  const isMobile = useIsMobile();
+
   return (
     <header className="flex flex-col gap-3 rounded-lg bg-card p-3 md:p-4 shadow-sm">
       {/* Row 1: Title + Controls */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          {!tvMode && <SidebarTrigger className="h-7 w-7 md:h-8 md:w-8 shrink-0" />}
+          {isMobile && <SidebarTrigger className="h-7 w-7 md:h-8 md:w-8 shrink-0" />}
           <span className="text-xl md:text-2xl">❄️</span>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">

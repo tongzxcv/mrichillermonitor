@@ -1,7 +1,5 @@
-import { getGasUrl } from '@/services/gasApi';
 import { useState, useEffect } from 'react';
 import { useSensorData } from '@/hooks/useSensorData';
-import { useTvMode } from '@/hooks/useTvMode';
 import TopBar from '@/components/TopBar';
 import SensorCard from '@/components/SensorCard';
 import TemperatureChart from '@/components/TemperatureChart';
@@ -15,10 +13,16 @@ import { useModalContext } from '@/App';
 
 const Index = () => {
   const [refreshInterval, setRefreshInterval] = useState(60);
-  const { settingsOpen, setSettingsOpen, exportOpen, setExportOpen } = useModalContext();
+  const {
+    settingsOpen,
+    setSettingsOpen,
+    exportOpen,
+    setExportOpen,
+    tvMode,
+    toggleTvMode,
+  } = useModalContext();
   const [gasConfigOpen, setGasConfigOpen] = useState(false);
   const { toast } = useToast();
-  const { tvMode, toggleTvMode } = useTvMode();
 
   const {
     sensors, alerts, wifi, chartData, lastUpdated,
@@ -32,38 +36,6 @@ const Index = () => {
   useEffect(() => {
     saveAlarmsToHistory(alerts);
   }, [alerts]);
-
-  const handleReboot = async () => {
-    const url = getGasUrl();
-    if (!url) {
-      toast({ title: 'Error', description: 'GAS URL not set' });
-      return;
-    }
-    try {
-      toast({ title: 'Sending reboot...', description: 'Rebooting all boards' });
-      await new Promise<void>((resolve) => {
-        const cbName = 'rebootCb_' + Date.now();
-        const script = document.createElement('script');
-        const timeout = setTimeout(() => {
-          delete (window as any)[cbName];
-          if (script.parentNode) script.parentNode.removeChild(script);
-          resolve();
-        }, 10000);
-        (window as any)[cbName] = () => {
-          clearTimeout(timeout);
-          delete (window as any)[cbName];
-          if (script.parentNode) script.parentNode.removeChild(script);
-          resolve();
-        };
-        script.src = url + '?action=reboot&callback=' + cbName;
-        document.head.appendChild(script);
-      });
-      toast({ title: 'Reboot sent', description: 'ESP will reboot on next cycle' });
-      refresh();
-    } catch (e) {
-      toast({ title: 'Reboot failed', description: 'Cannot connect to GAS' });
-    }
-  };
 
   const handleSaveThresholds = (newThresholds: Record<string, number>) => {
     Object.entries(newThresholds).forEach(([id, val]) => updateThreshold(id, val));
