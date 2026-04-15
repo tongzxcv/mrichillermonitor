@@ -6,7 +6,6 @@ import TemperatureChart from '@/components/TemperatureChart';
 import AlertsPanel from '@/components/AlertsPanel';
 import ThresholdModal from '@/components/ThresholdModal';
 import ExportModal from '@/components/ExportModal';
-import GasConfigModal from '@/components/GasConfigModal';
 import { useToast } from '@/hooks/use-toast';
 import { saveAlarmsToHistory } from '@/pages/AlarmHistory';
 import { useModalContext } from '@/App';
@@ -21,7 +20,6 @@ const Index = () => {
     tvMode,
     toggleTvMode,
   } = useModalContext();
-  const [gasConfigOpen, setGasConfigOpen] = useState(false);
   const { toast } = useToast();
 
   const {
@@ -40,12 +38,6 @@ const Index = () => {
   const handleSaveThresholds = (newThresholds: Record<string, number>) => {
     Object.entries(newThresholds).forEach(([id, val]) => updateThreshold(id, val));
     toast({ title: 'Saved', description: 'Threshold settings updated' });
-  };
-
-  const handleGasSave = () => {
-    checkDataSource();
-    refresh();
-    toast({ title: 'GAS Config Updated', description: 'System will fetch data from Google Sheets' });
   };
 
   return (
@@ -78,7 +70,6 @@ const Index = () => {
       <ThresholdModal open={settingsOpen} onClose={() => setSettingsOpen(false)}
         thresholds={thresholds} onSave={handleSaveThresholds} />
       <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} sensors={sensors} dataSource={dataSource} />
-      <GasConfigModal open={gasConfigOpen} onClose={() => setGasConfigOpen(false)} onSave={handleGasSave} />
     </div>
   );
 };

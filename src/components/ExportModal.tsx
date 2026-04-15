@@ -10,7 +10,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { SENSOR_CONFIGS } from '@/data/mockSensors';
 import type { SensorReading } from '@/data/mockSensors';
-import { getGasUrl } from '@/services/gasApi';
+import { fetchGasActionJsonp } from '@/services/gasApi';
 import { cn } from '@/lib/utils';
 
 interface ExportModalProps {
@@ -33,35 +33,6 @@ function toDateValue(dateString: string) {
 
 function toApiDate(date: Date) {
   return format(date, 'yyyy-MM-dd');
-}
-
-function fetchViaJsonp(targetUrl: string): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    const cbName = `gasExportCb_${Date.now()}`;
-    const script = document.createElement('script');
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error('JSONP timeout'));
-    }, 30000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      delete (window as unknown as Record<string, unknown>)[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    (window as unknown as Record<string, unknown>)[cbName] = (data: unknown) => {
-      cleanup();
-      resolve(data);
-    };
-
-    script.src = `${targetUrl}&callback=${cbName}`;
-    script.onerror = () => {
-      cleanup();
-      reject(new Error('JSONP script error'));
-    };
-    document.head.appendChild(script);
-  });
 }
 
 function escapeCsvValue(value: unknown) {
@@ -154,15 +125,12 @@ export default function ExportModal({ open, onClose, sensors, dataSource }: Expo
   const handleExportGas = async () => {
     setExporting(true);
     try {
-      const gasUrl = getGasUrl();
       const sensorIds = selected.map(id => `S${id.replace('s', '').padStart(2, '0')}`);
-      const params = new URLSearchParams({
-        action: 'exportCsv',
+      const data = await fetchGasActionJsonp<unknown>('exportCsv', {
         startDate: toApiDate(startDate),
         endDate: toApiDate(endDate),
         sensors: sensorIds.join(','),
       });
-      const data = await fetchViaJsonp(`${gasUrl}?${params.toString()}`);
       const csv = normalizeExportCsv(data, selected);
 
       if (!csv) {

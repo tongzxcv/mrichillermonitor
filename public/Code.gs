@@ -10,7 +10,10 @@
 
 var SENSOR_SHEET_NAME = 'SensorData';
 var CONFIG_SHEET_NAME = 'Config';
+var COMMAND_SHEET_NAME = 'Commands';
 var HISTORY_MAX = 288;
+var REBOOT_AUTH_TOKEN_PROPERTY = 'REBOOT_AUTH_TOKEN';
+var REBOOT_COMMAND_PROPERTY = 'PENDING_REBOOT_COMMAND';
 
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'getLatestData';
@@ -39,6 +42,10 @@ function doGet(e) {
         (e.parameter && e.parameter.endDate) || '',
         ((e.parameter && e.parameter.sensors) || '').split(',').filter(String)
       );
+      break;
+    case 'reboot':
+    case 'setRebootCommand':
+      result = handleSecureReboot((e.parameter && e.parameter.authToken) || '');
       break;
     default:
       result = { error: 'Unknown action: ' + action };
@@ -282,6 +289,35 @@ function updateConfig(configArr) {
   return { success: true };
 }
 
+function handleSecureReboot(authToken) {
+  if (!isValidRebootAuthToken(authToken)) {
+    return { error: 'Unauthorized reboot request' };
+  }
+
+  var timestamp = new Date();
+  var commandSheet = getOrCreateCommandSheet();
+  commandSheet.appendRow([
+    timestamp,
+    'REBOOT_ALL',
+    'queued'
+  ]);
+
+  PropertiesService.getScriptProperties().setProperty(
+    REBOOT_COMMAND_PROPERTY,
+    Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss")
+  );
+
+  var boardResult = queueBoardSheetRebootCommand();
+
+  return {
+    success: true,
+    status: 'ok',
+    message: 'Reboot command queued',
+    mode: boardResult.mode,
+    commandAt: Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss")
+  };
+}
+
 function getSensorSheetContext() {
   var sheet = getSheetByName(SENSOR_SHEET_NAME);
   if (!sheet) {
@@ -305,6 +341,70 @@ function getSensorSheetContext() {
 function getSheetByName(name) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   return spreadsheet ? spreadsheet.getSheetByName(name) : null;
+}
+
+function getOrCreateCommandSheet() {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = spreadsheet.getSheetByName(COMMAND_SHEET_NAME);
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(COMMAND_SHEET_NAME);
+    sheet.getRange(1, 1, 1, 3).setValues([['timestamp', 'command', 'status']]);
+  }
+  return sheet;
+}
+
+function isValidRebootAuthToken(authToken) {
+  var expectedToken = String(
+    PropertiesService.getScriptProperties().getProperty(REBOOT_AUTH_TOKEN_PROPERTY) || ''
+  ).trim();
+  var providedToken = String(authToken || '').trim();
+
+  if (!expectedToken) {
+    return false;
+  }
+
+  return providedToken === expectedToken;
+}
+
+function queueBoardSheetRebootCommand() {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var mappings = [
+    { prefix: 'Board1', cell: 'H1' },
+    { prefix: 'Board2', cell: 'G1' },
+    { prefix: 'Board3', cell: 'E1' }
+  ];
+  var queuedBoards = [];
+
+  for (var i = 0; i < mappings.length; i++) {
+    var sheet = findLatestSheetByPrefix(spreadsheet, mappings[i].prefix);
+    if (!sheet) continue;
+    sheet.getRange(mappings[i].cell).setValue('REBOOT');
+    queuedBoards.push(sheet.getName());
+  }
+
+  return {
+    mode: queuedBoards.length > 0 ? 'board-sheets' : 'command-log',
+    sheets: queuedBoards
+  };
+}
+
+function findLatestSheetByPrefix(spreadsheet, prefix) {
+  var sheets = spreadsheet.getSheets();
+  var matched = [];
+
+  for (var i = 0; i < sheets.length; i++) {
+    if (String(sheets[i].getName()).indexOf(prefix) === 0) {
+      matched.push(sheets[i]);
+    }
+  }
+
+  if (matched.length === 0) return null;
+
+  matched.sort(function(a, b) {
+    return b.getName().localeCompare(a.getName());
+  });
+
+  return matched[0];
 }
 
 function getSelectedSensorColumns(headers, selectedSensors) {
