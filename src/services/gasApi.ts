@@ -26,13 +26,21 @@ const sensorHistory: Record<string, { time: string; value: number }[]> = {};
 
 function assertTrustedGasUrl(url: string): string {
   const trimmed = String(url || '').trim();
-  if (!TRUSTED_GAS_URL_PATTERN.test(trimmed)) {
+  let parsed: URL;
+
+  try {
+    parsed = new URL(trimmed);
+  } catch {
     throw new Error('Invalid GAS URL. Only trusted Google Apps Script web app URLs are allowed.');
   }
 
-  const parsed = new URL(trimmed);
   if (parsed.protocol !== 'https:' || parsed.hostname !== 'script.google.com') {
     throw new Error('Invalid GAS URL host.');
+  }
+
+  const baseUrl = `${parsed.origin}${parsed.pathname}`;
+  if (!TRUSTED_GAS_URL_PATTERN.test(baseUrl)) {
+    throw new Error('Invalid GAS URL. Only trusted Google Apps Script web app URLs are allowed.');
   }
 
   return parsed.toString();
