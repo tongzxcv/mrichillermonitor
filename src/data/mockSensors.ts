@@ -30,7 +30,7 @@ export interface AlertEntry {
 
 export interface WifiBoard {
   name: string;
-  rssi: number;
+  rssi: number | null;
 }
 
 export const SENSOR_CONFIGS: SensorConfig[] = [

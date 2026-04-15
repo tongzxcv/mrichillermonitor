@@ -37,19 +37,25 @@ export default function TemperatureChart({
     const length = sensors[0].history.length;
     return Array.from({ length }, (_, index) => {
       const point: Record<string, string | number> = { time: sensors[0].history[index].time };
-      sensors.forEach(sensor => {
+      sensors.forEach((sensor) => {
         point[sensor.id] = sensor.history[index]?.value ?? 0;
       });
       return point;
     });
   }, [sensors, extChartData]);
 
+  const usablePointCount = useMemo(() => (
+    chartData.filter((point) => (
+      sensors.some((sensor) => typeof point[sensor.id] === 'number' && Number.isFinite(point[sensor.id]))
+    )).length
+  ), [chartData, sensors]);
+
   const yAxisDomain = useMemo(() => {
-    const activeSensorIds = selectedSensor ? [selectedSensor] : sensors.map(sensor => sensor.id);
+    const activeSensorIds = selectedSensor ? [selectedSensor] : sensors.map((sensor) => sensor.id);
     const values: number[] = [];
 
-    chartData.forEach(point => {
-      activeSensorIds.forEach(sensorId => {
+    chartData.forEach((point) => {
+      activeSensorIds.forEach((sensorId) => {
         const value = point[sensorId];
         if (typeof value === 'number' && Number.isFinite(value)) {
           values.push(value);
@@ -78,50 +84,56 @@ export default function TemperatureChart({
     <Card className="p-4 bg-card">
       <h2 className="text-sm font-semibold mb-3">Temperature Trend</h2>
       <div className="rounded-lg bg-foreground/[0.03] p-3">
-        <ResponsiveContainer width="100%" height={260} className="md:!h-[320px]">
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis
-              dataKey="time"
-              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-              unit="°C"
-              domain={yAxisDomain}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
-                fontSize: '12px',
-              }}
-            />
-            <Legend
-              onClick={(event) => {
-                const id = event.dataKey as string;
-                onSelectSensor(selectedSensor === id ? null : id);
-              }}
-              wrapperStyle={{ fontSize: '11px', cursor: 'pointer' }}
-            />
-            {sensors.map(sensor => (
-              <Line
-                key={sensor.id}
-                type="monotone"
-                dataKey={sensor.id}
-                name={sensor.name}
-                stroke={sensor.color}
-                strokeWidth={selectedSensor === null || selectedSensor === sensor.id ? 2 : 0.5}
-                opacity={selectedSensor === null || selectedSensor === sensor.id ? 1 : 0.2}
-                dot={false}
-                activeDot={{ r: 4 }}
-                connectNulls={false}
+        {usablePointCount < 2 ? (
+          <div className="flex h-[260px] items-center justify-center rounded-md text-sm text-muted-foreground md:h-[320px]">
+            กำลังสะสมข้อมูล Temperature Trend...
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={260} className="md:!h-[320px]">
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis
+                dataKey="time"
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                interval="preserveStartEnd"
               />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
+              <YAxis
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                unit="ยฐC"
+                domain={yAxisDomain}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                }}
+              />
+              <Legend
+                onClick={(event) => {
+                  const id = event.dataKey as string;
+                  onSelectSensor(selectedSensor === id ? null : id);
+                }}
+                wrapperStyle={{ fontSize: '11px', cursor: 'pointer' }}
+              />
+              {sensors.map((sensor) => (
+                <Line
+                  key={sensor.id}
+                  type="monotone"
+                  dataKey={sensor.id}
+                  name={sensor.name}
+                  stroke={sensor.color}
+                  strokeWidth={selectedSensor === null || selectedSensor === sensor.id ? 2 : 0.5}
+                  opacity={selectedSensor === null || selectedSensor === sensor.id ? 1 : 0.2}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                  connectNulls={false}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </Card>
   );

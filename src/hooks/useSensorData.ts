@@ -58,9 +58,9 @@ function buildAlertsFromSensors(sensors: SensorReading[]): AlertEntry[] {
 
 function buildWifiBoardsFromGas(result: { wifi1?: number | null; wifi2?: number | null; wifi3?: number | null }): WifiBoard[] {
     return [
-      { name: 'Board 1', rssi: typeof result.wifi1 === 'number' ? result.wifi1 : 0 },
-      { name: 'Board 2', rssi: typeof result.wifi2 === 'number' ? result.wifi2 : 0 },
-      { name: 'Board 3', rssi: typeof result.wifi3 === 'number' ? result.wifi3 : 0 },
+      { name: 'Board 1', rssi: typeof result.wifi1 === 'number' && result.wifi1 < 0 ? result.wifi1 : null },
+      { name: 'Board 2', rssi: typeof result.wifi2 === 'number' && result.wifi2 < 0 ? result.wifi2 : null },
+      { name: 'Board 3', rssi: typeof result.wifi3 === 'number' && result.wifi3 < 0 ? result.wifi3 : null },
     ];
 }
 

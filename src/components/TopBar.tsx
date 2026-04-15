@@ -19,13 +19,14 @@ interface TopBarProps {
   onExitTvMode?: () => void;
 }
 
-function rssiToStrength(rssi: number) {
+function rssiToStrength(rssi: number | null) {
+  if (rssi === null || !Number.isFinite(rssi)) return 0;
   if (rssi > -50) return 3;
   if (rssi > -65) return 2;
   return 1;
 }
 
-function RssiIndicator({ rssi }: { rssi: number }) {
+function RssiIndicator({ rssi }: { rssi: number | null }) {
   const strength = rssiToStrength(rssi);
   return (
     <div className="flex items-end gap-0.5 h-4">
@@ -115,7 +116,7 @@ export default function TopBar({
             <Wifi className="h-3 w-3 md:h-3.5 md:w-3.5" />
             <span>{b.name}</span>
             <RssiIndicator rssi={b.rssi} />
-            <span>{b.rssi} dBm</span>
+            <span>{b.rssi === null ? '--' : `${b.rssi} dBm`}</span>
           </div>
         ))}
       </div>
