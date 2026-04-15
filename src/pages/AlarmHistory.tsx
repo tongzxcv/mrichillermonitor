@@ -6,42 +6,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { AlertEntry } from '@/data/mockSensors';
-
-const STORAGE_KEY = 'alarm-history';
-
-function loadHistory(): AlertEntry[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveAlarmsToHistory(alerts: AlertEntry[]) {
-  if (alerts.length === 0) return;
-  try {
-    const existing = loadHistory();
-    const existingIds = new Set(existing.map(a => a.id));
-    const newOnes = alerts.filter(a => !existingIds.has(a.id));
-    if (newOnes.length === 0) return;
-    const merged = [...newOnes, ...existing].slice(0, 500);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-  } catch {
-    // storage full
-  }
-}
+import { clearAlarmHistory, loadAlarmHistory } from '@/lib/alarmHistory';
 
 export default function AlarmHistory() {
   const [history, setHistory] = useState<AlertEntry[]>([]);
   const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
-    setHistory(loadHistory());
+    setHistory(loadAlarmHistory());
   }, []);
 
   const clearHistory = () => {
-    localStorage.removeItem(STORAGE_KEY);
+    clearAlarmHistory();
     setHistory([]);
   };
 

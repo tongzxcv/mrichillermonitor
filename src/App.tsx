@@ -19,12 +19,13 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { useTheme } from "@/hooks/useTheme";
 import { useTvMode } from "@/hooks/useTvMode";
 import Index from "./pages/Index.tsx";
-import History from "./pages/History.tsx";
-import AlarmHistory from "./pages/AlarmHistory.tsx";
-import NotFound from "./pages/NotFound.tsx";
-import { useState, createContext, useContext } from "react";
+import { useState, createContext, useContext, lazy, Suspense } from "react";
 import { getStoredRebootAuthToken, triggerRebootAll } from "@/services/gasApi";
 import { useToast } from "@/hooks/use-toast";
+
+const History = lazy(() => import("./pages/History.tsx"));
+const AlarmHistory = lazy(() => import("./pages/AlarmHistory.tsx"));
+const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -109,9 +110,18 @@ function AppLayout() {
             <main className="flex-1">
               <Routes>
                 <Route path="/" element={<Index />} />
-                <Route path="/history" element={<History />} />
-                <Route path="/alarm-history" element={<AlarmHistory />} />
-                <Route path="*" element={<NotFound />} />
+                <Route
+                  path="/history"
+                  element={<Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading history...</div>}><History /></Suspense>}
+                />
+                <Route
+                  path="/alarm-history"
+                  element={<Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading alarm history...</div>}><AlarmHistory /></Suspense>}
+                />
+                <Route
+                  path="*"
+                  element={<Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading...</div>}><NotFound /></Suspense>}
+                />
               </Routes>
             </main>
           </div>

@@ -1,14 +1,30 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { useSensorData } from '@/hooks/useSensorData';
 import TopBar from '@/components/TopBar';
 import SensorCard from '@/components/SensorCard';
-import TemperatureChart from '@/components/TemperatureChart';
-import AlertsPanel from '@/components/AlertsPanel';
-import ThresholdModal from '@/components/ThresholdModal';
-import ExportModal from '@/components/ExportModal';
 import { useToast } from '@/hooks/use-toast';
-import { saveAlarmsToHistory } from '@/pages/AlarmHistory';
+import { saveAlarmsToHistory } from '@/lib/alarmHistory';
 import { useModalContext } from '@/App';
+
+const TemperatureChart = lazy(() => import('@/components/TemperatureChart'));
+const AlertsPanel = lazy(() => import('@/components/AlertsPanel'));
+const ThresholdModal = lazy(() => import('@/components/ThresholdModal'));
+const ExportModal = lazy(() => import('@/components/ExportModal'));
+
+function ChartSkeleton() {
+  return (
+    <div className="rounded-lg border bg-card p-4">
+      <div className="mb-3 h-5 w-40 animate-pulse rounded bg-muted" />
+      <div className="rounded-lg bg-foreground/[0.03] p-3">
+        <div className="h-[260px] rounded-md animate-pulse bg-muted/60 md:h-[320px]" />
+      </div>
+    </div>
+  );
+}
+
+function PanelSkeleton() {
+  return <div className="h-[220px] rounded-lg border bg-card animate-pulse" />;
+}
 
 const Index = () => {
   const [refreshInterval, setRefreshInterval] = useState(60);
@@ -56,20 +72,26 @@ const Index = () => {
       </div>
       <div className={"grid gap-4 " + (tvMode ? 'grid-cols-1 tv-chart-area' : 'grid-cols-1 lg:grid-cols-4')}>
         <div className={tvMode ? '' : 'lg:col-span-3'}>
-          <TemperatureChart sensors={sensors} selectedSensor={selectedSensor}
-            onSelectSensor={setSelectedSensor} chartData={chartData} />
+          <Suspense fallback={<ChartSkeleton />}>
+            <TemperatureChart sensors={sensors} selectedSensor={selectedSensor}
+              onSelectSensor={setSelectedSensor} chartData={chartData} />
+          </Suspense>
         </div>
         {!tvMode && (
           <div>
-            <AlertsPanel alerts={alerts} soundEnabled={soundEnabled}
-              onToggleSound={() => setSoundEnabled(!soundEnabled)}
-              onClearAlerts={clearAlerts} />
+            <Suspense fallback={<PanelSkeleton />}>
+              <AlertsPanel alerts={alerts} soundEnabled={soundEnabled}
+                onToggleSound={() => setSoundEnabled(!soundEnabled)}
+                onClearAlerts={clearAlerts} />
+            </Suspense>
           </div>
         )}
       </div>
-      <ThresholdModal open={settingsOpen} onClose={() => setSettingsOpen(false)}
-        thresholds={thresholds} onSave={handleSaveThresholds} />
-      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} sensors={sensors} dataSource={dataSource} />
+      <Suspense fallback={null}>
+        <ThresholdModal open={settingsOpen} onClose={() => setSettingsOpen(false)}
+          thresholds={thresholds} onSave={handleSaveThresholds} />
+        <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} sensors={sensors} dataSource={dataSource} />
+      </Suspense>
     </div>
   );
 };
