@@ -1,8 +1,8 @@
-import { Wifi, Volume2, VolumeX, Settings, Download, RefreshCw, History, Link2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Wifi, Volume2, VolumeX, Menu, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { WifiBoard } from '@/data/mockSensors';
 
 interface TopBarProps {
@@ -12,11 +12,10 @@ interface TopBarProps {
   onToggleSound: () => void;
   refreshInterval: number;
   onIntervalChange: (val: number) => void;
-  onOpenSettings: () => void;
-  onOpenExport: () => void;
-  onReboot: () => void;
   dataSource: 'mock' | 'gas';
   loading: boolean;
+  tvMode?: boolean;
+  onExitTvMode?: () => void;
 }
 
 function rssiToStrength(rssi: number) {
@@ -49,22 +48,21 @@ export default function TopBar({
   onToggleSound,
   refreshInterval,
   onIntervalChange,
-  onOpenSettings,
-  onOpenExport,
-  onOpenGasConfig,
-  onReboot,
   dataSource,
   loading,
+  tvMode,
+  onExitTvMode,
 }: TopBarProps) {
   return (
     <header className="flex flex-col gap-3 rounded-lg bg-card p-3 md:p-4 shadow-sm">
       {/* Row 1: Title + Controls */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
+          {!tvMode && <SidebarTrigger className="h-7 w-7 md:h-8 md:w-8 shrink-0" />}
           <span className="text-xl md:text-2xl">❄️</span>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h1 className="text-sm md:text-lg font-bold leading-tight truncate">MRI Chiller Monitor</h1>
+              <h1 className="text-sm md:text-lg font-bold leading-tight truncate tv-title">MRI Chiller Monitor</h1>
               {dataSource === 'gas' ? (
                 <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-accent text-accent">GAS</Badge>
               ) : (
@@ -82,7 +80,7 @@ export default function TopBar({
           </div>
         </div>
 
-        {/* Controls - icon buttons wrap naturally */}
+        {/* Controls */}
         <div className="flex items-center gap-1 md:gap-2 flex-wrap justify-end">
           <Select value={String(refreshInterval)} onValueChange={v => onIntervalChange(Number(v))}>
             <SelectTrigger className="h-7 md:h-8 w-20 md:w-28 text-[10px] md:text-xs">
@@ -98,25 +96,16 @@ export default function TopBar({
           <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8" onClick={onToggleSound}>
             {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8" onClick={onOpenSettings}>
-            <Settings className="h-3.5 w-3.5" />
-          </Button>
-          <Button variant="ghost" size="sm" className="h-7 md:h-8 gap-1 px-2" onClick={onOpenExport}>
-            <Download className="h-3.5 w-3.5" />
-            <span className="text-xs">Export Data</span>
-          </Button>
-          <Link to="/history">
-            <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8">
-              <History className="h-3.5 w-3.5" />
+
+          {tvMode && onExitTvMode && (
+            <Button variant="outline" size="sm" className="h-7 md:h-8 text-[10px] md:text-xs gap-1" onClick={onExitTvMode}>
+              <Monitor className="h-3 w-3" /> Exit TV
             </Button>
-          </Link>
-          <Button variant="outline" size="sm" className="h-7 md:h-8 text-[10px] md:text-xs gap-1" onClick={onReboot}>
-            <RefreshCw className="h-3 w-3" /> <span className="hidden sm:inline">Reboot</span>
-          </Button>
+          )}
         </div>
       </div>
 
-      {/* Row 2: WiFi - scrollable on mobile */}
+      {/* Row 2: WiFi */}
       <div className="flex items-center gap-3 overflow-x-auto pb-1 -mb-1 scrollbar-thin">
         {wifi.map(b => (
           <div key={b.name} className="flex items-center gap-1 text-[10px] md:text-xs text-muted-foreground whitespace-nowrap shrink-0">

@@ -1,6 +1,7 @@
 import { getGasUrl } from '@/services/gasApi';
 import { useState } from 'react';
 import { useSensorData } from '@/hooks/useSensorData';
+import { useTvMode } from '@/hooks/useTvMode';
 import TopBar from '@/components/TopBar';
 import SensorCard from '@/components/SensorCard';
 import TemperatureChart from '@/components/TemperatureChart';
@@ -9,6 +10,8 @@ import ThresholdModal from '@/components/ThresholdModal';
 import ExportModal from '@/components/ExportModal';
 import GasConfigModal from '@/components/GasConfigModal';
 import { useToast } from '@/hooks/use-toast';
+import { saveAlarmsToHistory } from '@/pages/AlarmHistory';
+import { useEffect } from 'react';
 
 const Index = () => {
   const [refreshInterval, setRefreshInterval] = useState(60);
@@ -16,6 +19,7 @@ const Index = () => {
   const [exportOpen, setExportOpen] = useState(false);
   const [gasConfigOpen, setGasConfigOpen] = useState(false);
   const { toast } = useToast();
+  const { tvMode, toggleTvMode } = useTvMode();
 
   const {
     sensors, alerts, wifi, chartData, lastUpdated,
@@ -26,39 +30,43 @@ const Index = () => {
     clearAlerts,
   } = useSensorData(refreshInterval);
 
-const handleReboot = async () => {
-  const url = getGasUrl();
-  if (!url) {
-    toast({ title: '❌ Error', description: 'ยังไม่ได้ตั้งค่า GAS URL' });
-    return;
-  }
-  try {
-    toast({ title: '⏳ กำลังส่งคำสั่ง...', description: 'กำลัง reboot ทุก Board' });
-    // ใช้ JSONP แทน fetch เพราะ GAS ไม่รองรับ CORS
-    await new Promise<void>((resolve) => {
-      const cbName = 'rebootCb_' + Date.now();
-      const script = document.createElement('script');
-      const timeout = setTimeout(() => {
-        delete (window as any)[cbName];
-        if (script.parentNode) script.parentNode.removeChild(script);
-        resolve(); // timeout แต่ GAS อาจทำงานแล้ว
-      }, 10000);
-      (window as any)[cbName] = () => {
-        clearTimeout(timeout);
-        delete (window as any)[cbName];
-        if (script.parentNode) script.parentNode.removeChild(script);
-        resolve();
-      };
-      script.src = `${url}?action=reboot&callback=${cbName}`;
-      document.head.appendChild(script);
-    });
-    toast({ title: '✅ Reboot สำเร็จ', description: 'ส่งคำสั่ง REBOOT แล้ว ESP จะ reboot รอบถัดไป' });
-    refresh();
-  } catch (e) {
-    toast({ title: '❌ Reboot ล้มเหลว', description: 'ไม่สามารถเชื่อมต่อ GAS ได้' });
-  }
-};
-  
+  // Persist alerts to alarm history
+  useEffect(() => {
+    saveAlarmsToHistory(alerts);
+  }, [alerts]);
+
+  const handleReboot = async () => {
+    const url = getGasUrl();
+    if (!url) {
+      toast({ title: '❌ Error', description: 'ยังไม่ได้ตั้งค่า GAS URL' });
+      return;
+    }
+    try {
+      toast({ title: '⏳ กำลังส่งคำสั่ง...', description: 'กำลัง reboot ทุก Board' });
+      await new Promise<void>((resolve) => {
+        const cbName = 'rebootCb_' + Date.now();
+        const script = document.createElement('script');
+        const timeout = setTimeout(() => {
+          delete (window as any)[cbName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+          resolve();
+        }, 10000);
+        (window as any)[cbName] = () => {
+          clearTimeout(timeout);
+          delete (window as any)[cbName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+          resolve();
+        };
+        script.src = `${url}?action=reboot&callback=${cbName}`;
+        document.head.appendChild(script);
+      });
+      toast({ title: '✅ Reboot สำเร็จ', description: 'ส่งคำสั่ง REBOOT แล้ว ESP จะ reboot รอบถัดไป' });
+      refresh();
+    } catch (e) {
+      toast({ title: '❌ Reboot ล้มเหลว', description: 'ไม่สามารถเชื่อมต่อ GAS ได้' });
+    }
+  };
+
   const handleSaveThresholds = (newThresholds: Record<string, number>) => {
     Object.entries(newThresholds).forEach(([id, val]) => updateThreshold(id, val));
     toast({ title: '✅ บันทึกเรียบร้อย', description: 'Threshold settings updated' });
@@ -69,30 +77,31 @@ const handleReboot = async () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 max-w-[1600px] mx-auto">
+    <div className={`min-h-screen bg-background p-4 md:p-6 space-y-4 ${tvMode ? 'tv-layout' : 'max-w-[1600px] mx-auto'}`}>
       <TopBar lastUpdated={lastUpdated} wifi={wifi} soundEnabled={soundEnabled}
         onToggleSound={() => setSoundEnabled(!soundEnabled)}
         refreshInterval={refreshInterval} onIntervalChange={setRefreshInterval}
-        onOpenSettings={() => setSettingsOpen(true)} onOpenExport={() => setExportOpen(true)}
-        onReboot={handleReboot}
-        dataSource={dataSource} loading={loading} />
+        dataSource={dataSource} loading={loading}
+        tvMode={tvMode} onExitTvMode={toggleTvMode} />
       {error && <div className="text-xs text-destructive bg-destructive/10 rounded-md px-3 py-2">⚠️ GAS Error: {error} — ใช้ mock data แทน</div>}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+      <div className={`grid gap-3 ${tvMode ? 'grid-cols-5 tv-sensor-grid' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'}`}>
         {sensors.map(s => (
           <SensorCard key={s.id} sensor={s} isSelected={selectedSensor === s.id}
             onClick={() => setSelectedSensor(selectedSensor === s.id ? null : s.id)} />
         ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div className="lg:col-span-3">
+      <div className={`grid gap-4 ${tvMode ? 'grid-cols-1 tv-chart-area' : 'grid-cols-1 lg:grid-cols-4'}`}>
+        <div className={tvMode ? '' : 'lg:col-span-3'}>
           <TemperatureChart sensors={sensors} selectedSensor={selectedSensor}
             onSelectSensor={setSelectedSensor} chartData={chartData} />
         </div>
-        <div>
-          <AlertsPanel alerts={alerts} soundEnabled={soundEnabled}
-            onToggleSound={() => setSoundEnabled(!soundEnabled)}
-            onClearAlerts={clearAlerts} />
-        </div>
+        {!tvMode && (
+          <div>
+            <AlertsPanel alerts={alerts} soundEnabled={soundEnabled}
+              onToggleSound={() => setSoundEnabled(!soundEnabled)}
+              onClearAlerts={clearAlerts} />
+          </div>
+        )}
       </div>
       <ThresholdModal open={settingsOpen} onClose={() => setSettingsOpen(false)}
         thresholds={thresholds} onSave={handleSaveThresholds} />
