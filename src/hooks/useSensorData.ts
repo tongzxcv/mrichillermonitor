@@ -90,9 +90,10 @@ export function useSensorData(refreshInterval: number) {
                 const history = await fetchChartHistory();
                 if (history.length > 0) {
                           initSensorHistoryFromChart(history);
-                          const labels = history.map(h => h.time);
+                          const recentHistory = history.slice(-288);
+                          const labels = recentHistory.map(h => h.time);
                           const datasets = SENSOR_CONFIGS.map((_, idx) =>
-                                      history.map(h => {
+                                      recentHistory.map(h => {
                                                     const v = h.vals[idx];
                                                     return (v !== null && v !== undefined && !isNaN(v as number) && (v as number) > 0) ? v as number : null;
                                       })
@@ -119,10 +120,10 @@ export function useSensorData(refreshInterval: number) {
                                       second: '2-digit'
                           });
                           setChartData(prev => {
-                                      const newLabels = [...prev.labels, timeLabel];
+                                      const newLabels = [...prev.labels, timeLabel].slice(-288);
                                       const newDatasets = result.sensors.map((s, idx) => {
                                                     const prevDs = prev.datasets[idx] || [];
-                                                    return [...prevDs, s.current > 0 ? s.current : null];
+                                                    return [...prevDs, s.current > 0 ? s.current : null].slice(-288);
                                       });
                                       return { labels: newLabels, datasets: newDatasets };
                           });
@@ -155,10 +156,10 @@ export function useSensorData(refreshInterval: number) {
                 second: '2-digit'
         });
         setChartData(prev => {
-                const newLabels = [...prev.labels, timeLabel];
+                const newLabels = [...prev.labels, timeLabel].slice(-288);
                 const newDatasets = newSensors.map((s, idx) => {
                           const prevDs = prev.datasets[idx] || [];
-                          return [...prevDs, s.current > 0 ? s.current : null];
+                          return [...prevDs, s.current > 0 ? s.current : null].slice(-288);
                 });
                 return { labels: newLabels, datasets: newDatasets };
         });
@@ -176,8 +177,9 @@ export function useSensorData(refreshInterval: number) {
   }, [dataSource, refreshFromGas, refreshFromMock]);
 
   useEffect(() => {
-        loadHistory().then(() => refresh());
-  }, []);
+        refresh();
+        loadHistory();
+  }, [loadHistory, refresh]);
 
   useEffect(() => {
         if (refreshInterval <= 0) return;
