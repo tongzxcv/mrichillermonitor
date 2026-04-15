@@ -228,6 +228,39 @@ function isSuccessfulActionResponse(data: unknown): boolean {
     || String(result.message || '').toLowerCase().includes('reboot');
 }
 
+function getActionErrorMessage(data: unknown): string | null {
+  if (!data) return null;
+
+  if (typeof data === 'string') {
+    const text = data.trim();
+    if (!text) return null;
+    return isSuccessfulActionResponse(text) ? null : text;
+  }
+
+  if (typeof data !== 'object') return null;
+
+  const result = data as {
+    error?: unknown;
+    message?: unknown;
+    status?: unknown;
+  };
+
+  if (typeof result.error === 'string' && result.error.trim()) {
+    return result.error.trim();
+  }
+
+  if (
+    typeof result.message === 'string'
+    && result.message.trim()
+    && String(result.status || '').toLowerCase() !== 'ok'
+    && !isSuccessfulActionResponse(data)
+  ) {
+    return result.message.trim();
+  }
+
+  return null;
+}
+
 export async function triggerRebootAll(authToken: string): Promise<void> {
   const normalizedToken = String(authToken || '').trim();
   if (!normalizedToken) {
@@ -244,6 +277,11 @@ export async function triggerRebootAll(authToken: string): Promise<void> {
       const response = await fetchGasActionJsonp<unknown>(action, { authToken: normalizedToken });
       if (isSuccessfulActionResponse(response)) {
         return;
+      }
+
+      const actionError = getActionErrorMessage(response);
+      if (actionError) {
+        throw new Error(actionError);
       }
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown GAS error');
