@@ -61,6 +61,11 @@ export interface ChartData {
     datasets: (number | null)[][];
 }
 
+function getMaxChartPoints(refreshInterval: number) {
+    const safeInterval = Math.max(1, refreshInterval);
+    return Math.max(24, Math.round((6 * 60 * 60) / safeInterval));
+}
+
 export function useSensorData(refreshInterval: number) {
     const [sensors, setSensors] = useState<SensorReading[]>([]);
     const [alerts, setAlerts] = useState<AlertEntry[]>([]);
@@ -77,6 +82,7 @@ export function useSensorData(refreshInterval: number) {
     const [error, setError] = useState<string | null>(null);
     const [historyLoaded, setHistoryLoaded] = useState(false);
     const prevCriticalRef = useRef<Set<string>>(new Set());
+    const maxChartPoints = getMaxChartPoints(refreshInterval);
     const [checkDataSource] = useState(() => () => {
           setDataSource(isGasConfigured() ? 'gas' : 'mock');
     });
@@ -90,7 +96,7 @@ export function useSensorData(refreshInterval: number) {
                 const history = await fetchChartHistory();
                 if (history.length > 0) {
                           initSensorHistoryFromChart(history);
-                          const recentHistory = history.slice(-288);
+                          const recentHistory = history.slice(-maxChartPoints);
                           const labels = recentHistory.map(h => h.time);
                           const datasets = SENSOR_CONFIGS.map((_, idx) =>
                                       recentHistory.map(h => {
@@ -104,7 +110,7 @@ export function useSensorData(refreshInterval: number) {
                 console.log('History load failed:', e);
         }
         setHistoryLoaded(true);
-  }, []);
+  }, [maxChartPoints]);
 
   const refreshFromGas = useCallback(async () => {
         setLoading(true);
@@ -120,10 +126,10 @@ export function useSensorData(refreshInterval: number) {
                                       second: '2-digit'
                           });
                           setChartData(prev => {
-                                      const newLabels = [...prev.labels, timeLabel].slice(-288);
+                                      const newLabels = [...prev.labels, timeLabel].slice(-maxChartPoints);
                                       const newDatasets = result.sensors.map((s, idx) => {
                                                     const prevDs = prev.datasets[idx] || [];
-                                                    return [...prevDs, s.current > 0 ? s.current : null].slice(-288);
+                                                    return [...prevDs, s.current > 0 ? s.current : null].slice(-maxChartPoints);
                                       });
                                       return { labels: newLabels, datasets: newDatasets };
                           });
@@ -156,16 +162,16 @@ export function useSensorData(refreshInterval: number) {
                 second: '2-digit'
         });
         setChartData(prev => {
-                const newLabels = [...prev.labels, timeLabel].slice(-288);
+                const newLabels = [...prev.labels, timeLabel].slice(-maxChartPoints);
                 const newDatasets = newSensors.map((s, idx) => {
                           const prevDs = prev.datasets[idx] || [];
-                          return [...prevDs, s.current > 0 ? s.current : null].slice(-288);
+                          return [...prevDs, s.current > 0 ? s.current : null].slice(-maxChartPoints);
                 });
                 return { labels: newLabels, datasets: newDatasets };
         });
         setWifi(generateWifiBoards());
         setLastUpdated(new Date());
-  }, [thresholds]);
+  }, [maxChartPoints, thresholds]);
 
   const refresh = useCallback(() => {
         if (dataSource === 'gas' && isGasConfigured()) {
