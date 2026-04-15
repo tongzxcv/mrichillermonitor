@@ -11,13 +11,27 @@ import Index from "./pages/Index.tsx";
 import History from "./pages/History.tsx";
 import AlarmHistory from "./pages/AlarmHistory.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import { useState } from "react";
-import ThresholdModal from "@/components/ThresholdModal";
-import ExportModal from "@/components/ExportModal";
+import { useState, createContext, useContext } from "react";
 import { getGasUrl } from "@/services/gasApi";
 import { useToast } from "@/hooks/use-toast";
 
 const queryClient = new QueryClient();
+
+interface ModalContextType {
+  settingsOpen: boolean;
+  setSettingsOpen: (v: boolean) => void;
+  exportOpen: boolean;
+  setExportOpen: (v: boolean) => void;
+}
+
+export const ModalContext = createContext<ModalContextType>({
+  settingsOpen: false,
+  setSettingsOpen: () => {},
+  exportOpen: false,
+  setExportOpen: () => {},
+});
+
+export const useModalContext = () => useContext(ModalContext);
 
 function AppLayout() {
   const { isDark, toggleTheme } = useTheme();
@@ -29,53 +43,40 @@ function AppLayout() {
   const handleReboot = () => {
     const url = getGasUrl();
     if (!url) {
-      toast({ title: '❌ Error', description: 'ยังไม่ได้ตั้งค่า GAS URL' });
+      toast({ title: 'Error', description: 'GAS URL not set' });
       return;
     }
-    toast({ title: '⏳ กำลังส่งคำสั่ง Reboot...' });
+    toast({ title: 'Sending Reboot...' });
   };
 
-  if (tvMode) {
-    return (
-      <div className="min-h-screen flex w-full">
-        <div className="flex-1 flex flex-col">
-          <main className="flex-1">
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/alarm-history" element={<AlarmHistory />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar
-          isDark={isDark}
-          onToggleTheme={toggleTheme}
-          tvMode={tvMode}
-          onToggleTvMode={toggleTvMode}
-          onOpenSettings={() => setSettingsOpen(true)}
-          onOpenExport={() => setExportOpen(true)}
-          onReboot={handleReboot}
-        />
-        <div className="flex-1 flex flex-col min-w-0">
-          <main className="flex-1">
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/alarm-history" element={<AlarmHistory />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
+    <ModalContext.Provider value={{ settingsOpen, setSettingsOpen, exportOpen, setExportOpen }}>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          {!tvMode && (
+            <AppSidebar
+              isDark={isDark}
+              onToggleTheme={toggleTheme}
+              tvMode={tvMode}
+              onToggleTvMode={toggleTvMode}
+              onOpenSettings={() => setSettingsOpen(true)}
+              onOpenExport={() => setExportOpen(true)}
+              onReboot={handleReboot}
+            />
+          )}
+          <div className="flex-1 flex flex-col min-w-0">
+            <main className="flex-1">
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/alarm-history" element={<AlarmHistory />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </main>
+          </div>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </ModalContext.Provider>
   );
 }
 
