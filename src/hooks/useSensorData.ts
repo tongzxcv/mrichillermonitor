@@ -56,6 +56,14 @@ function buildAlertsFromSensors(sensors: SensorReading[]): AlertEntry[] {
       }));
 }
 
+function buildWifiBoardsFromGas(result: { wifi1?: number | null; wifi2?: number | null; wifi3?: number | null }): WifiBoard[] {
+    return [
+      { name: 'Board 1', rssi: typeof result.wifi1 === 'number' ? result.wifi1 : 0 },
+      { name: 'Board 2', rssi: typeof result.wifi2 === 'number' ? result.wifi2 : 0 },
+      { name: 'Board 3', rssi: typeof result.wifi3 === 'number' ? result.wifi3 : 0 },
+    ];
+}
+
 export interface ChartData {
     labels: string[];
     datasets: (number | null)[][];
@@ -116,6 +124,7 @@ export function useSensorData(refreshInterval: number) {
                 if (result.error) throw new Error(result.error);
                 if (result.sensors && result.sensors.length > 0) {
                           setSensors(result.sensors);
+                          setWifi(buildWifiBoardsFromGas(result));
                           const timeLabel = new Date().toLocaleTimeString('th-TH', {
                                       hour: '2-digit',
                                       minute: '2-digit',
@@ -141,9 +150,6 @@ export function useSensorData(refreshInterval: number) {
                 }
         } catch (err) {
                 setError(err instanceof Error ? err.message : 'GAS fetch failed');
-                const newSensors = generateSensorReadings(thresholds);
-                setSensors(newSensors);
-                setLastUpdated(new Date());
         } finally {
                 setLoading(false);
         }
@@ -175,7 +181,6 @@ export function useSensorData(refreshInterval: number) {
         } else {
                 refreshFromMock();
         }
-        setWifi(generateWifiBoards());
   }, [dataSource, refreshFromGas, refreshFromMock]);
 
   useEffect(() => {

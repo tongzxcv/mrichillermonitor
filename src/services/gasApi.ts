@@ -5,8 +5,14 @@ const HARDCODED_GAS_URL = 'https://script.google.com/macros/s/AKfycbypCLMU0k37UT
 const TRUSTED_GAS_URL_PATTERN = /^https:\/\/script\.google\.com\/macros\/s\/[-\w]+\/exec$/i;
 const REBOOT_AUTH_STORAGE_KEY = 'reboot_auth_token';
 const HISTORY_MAX = 288;
+const JSONP_TIMEOUT_MS = 30000;
+const JSONP_RETRY_DELAY_MS = 1200;
 
 type GasQueryParams = Record<string, string | number | boolean | null | undefined>;
+type GasRequestOptions = {
+  timeoutMs?: number;
+  retries?: number;
+};
 
 interface GasLatestResponse {
   sensors: SensorReading[];
@@ -82,14 +88,14 @@ function buildGasActionUrl(action: string, params: GasQueryParams = {}): string 
   return url.toString();
 }
 
-function fetchViaJsonp<T>(trustedUrl: string): Promise<T> {
+function fetchViaJsonp<T>(trustedUrl: string, timeoutMs = JSONP_TIMEOUT_MS): Promise<T> {
   return new Promise((resolve, reject) => {
     const cbName = `gasJsonpCb_${Date.now()}`;
     const script = document.createElement('script');
     const timeout = setTimeout(() => {
       cleanup();
       reject(new Error('JSONP timeout'));
-    }, 15000);
+    }, timeoutMs);
 
     function cleanup() {
       clearTimeout(timeout);
@@ -112,8 +118,38 @@ function fetchViaJsonp<T>(trustedUrl: string): Promise<T> {
   });
 }
 
-export function fetchGasActionJsonp<T>(action: string, params: GasQueryParams = {}): Promise<T> {
-  return fetchViaJsonp<T>(buildGasActionUrl(action, params));
+function isRetryableGasError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return error.message === 'JSONP timeout' || error.message === 'JSONP script error';
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+export async function fetchGasActionJsonp<T>(
+  action: string,
+  params: GasQueryParams = {},
+  options: GasRequestOptions = {},
+): Promise<T> {
+  const retries = Math.max(0, options.retries ?? 0);
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await fetchViaJsonp<T>(buildGasActionUrl(action, params), options.timeoutMs ?? JSONP_TIMEOUT_MS);
+    } catch (error) {
+      lastError = error;
+      if (attempt === retries || !isRetryableGasError(error)) {
+        throw error;
+      }
+      await delay(JSONP_RETRY_DELAY_MS);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Unknown GAS error');
 }
 
 export function initSensorHistoryFromChart(history: ChartHistoryPoint[]) {
@@ -134,7 +170,7 @@ export function initSensorHistoryFromChart(history: ChartHistoryPoint[]) {
 export async function fetchLatestData(
   thresholds?: Record<string, number>,
 ): Promise<GasLatestResponse> {
-  const data = await fetchGasActionJsonp<GasLatestResponse>('getLatestData');
+  const data = await fetchGasActionJsonp<GasLatestResponse>('getLatestData', {}, { retries: 1 });
   if (!data || !Array.isArray(data.sensors)) {
     throw new Error('Invalid response format from GAS');
   }
@@ -188,7 +224,7 @@ export async function fetchLatestData(
 }
 
 export async function fetchChartHistory(): Promise<ChartHistoryPoint[]> {
-  const data = await fetchGasActionJsonp<unknown[]>('getChartHistory');
+  const data = await fetchGasActionJsonp<unknown[]>('getChartHistory', {}, { retries: 1 });
   if (!Array.isArray(data)) return [];
 
   return data.map((row: any) => ({
@@ -199,7 +235,7 @@ export async function fetchChartHistory(): Promise<ChartHistoryPoint[]> {
 
 export async function checkGasConnection(): Promise<{ ok: boolean; message: string }> {
   try {
-    const data = await fetchGasActionJsonp<GasLatestResponse>('getLatestData');
+    const data = await fetchGasActionJsonp<GasLatestResponse>('getLatestData', {}, { retries: 1 });
     if (data && Array.isArray(data.sensors) && data.sensors.length > 0) {
       return { ok: true, message: `Connected! Found ${data.sensors.length} sensors` };
     }
