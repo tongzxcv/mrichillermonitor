@@ -16,6 +16,7 @@ import {
 
 const MAX_CHART_POINTS = 288;
 const DASHBOARD_CACHE_KEY = 'dashboard_snapshot_v1';
+const HISTORY_LOAD_DELAY_MS = 700;
 
 interface ChartData {
   labels: string[];
@@ -298,7 +299,10 @@ export function useSensorData(refreshInterval: number) {
 
   useEffect(() => {
     if (dataSource !== 'gas' || !latestLoaded || historyLoaded) return;
-    void loadHistory();
+    const timeoutId = window.setTimeout(() => {
+      void loadHistory();
+    }, HISTORY_LOAD_DELAY_MS);
+    return () => window.clearTimeout(timeoutId);
   }, [dataSource, historyLoaded, latestLoaded, loadHistory]);
 
   useEffect(() => {

@@ -12,6 +12,10 @@ var SENSOR_SHEET_NAME = 'SensorData';
 var CONFIG_SHEET_NAME = 'Config';
 var COMMAND_SHEET_NAME = 'Commands';
 var HISTORY_MAX = 288;
+var LATEST_DATA_CACHE_KEY = 'latest_data_cache_v1';
+var CHART_HISTORY_CACHE_KEY = 'chart_history_cache_v1';
+var LATEST_DATA_CACHE_TTL_SECONDS = 15;
+var CHART_HISTORY_CACHE_TTL_SECONDS = 30;
 var REBOOT_AUTH_TOKEN_PROPERTY = 'REBOOT_AUTH_TOKEN';
 var REBOOT_COMMAND_PROPERTY = 'PENDING_REBOOT_COMMAND';
 
@@ -92,6 +96,11 @@ function outputJson(payload, callback) {
 }
 
 function getLatestData() {
+  var cachedLatest = getCachedJson(LATEST_DATA_CACHE_KEY);
+  if (cachedLatest) {
+    return cachedLatest;
+  }
+
   var context = getSensorSheetContext();
   if (context.error) return context.error;
   if (context.rows.length === 0) return { sensors: [], timestamp: null };
@@ -136,10 +145,13 @@ function getLatestData() {
     });
   }
 
-  return {
+  var response = {
     sensors: sensors,
     timestamp: formatTimestamp(lastRow[0])
   };
+
+  setCachedJson(LATEST_DATA_CACHE_KEY, response, LATEST_DATA_CACHE_TTL_SECONDS);
+  return response;
 }
 
 function getHistoryData(dateStr) {
@@ -168,6 +180,11 @@ function getHistoryData(dateStr) {
 }
 
 function getChartHistory() {
+  var cachedHistory = getCachedJson(CHART_HISTORY_CACHE_KEY);
+  if (cachedHistory) {
+    return cachedHistory;
+  }
+
   var context = getSensorSheetContext();
   if (context.error) return [];
 
@@ -186,6 +203,7 @@ function getChartHistory() {
     });
   }
 
+  setCachedJson(CHART_HISTORY_CACHE_KEY, points, CHART_HISTORY_CACHE_TTL_SECONDS);
   return points;
 }
 
@@ -265,6 +283,7 @@ function logSensorData(sensorData) {
     row.push(sensorData[headers[col]] || 0);
   }
   sheet.appendRow(row);
+  clearDashboardCaches();
   return { success: true, row: sheet.getLastRow() };
 }
 
@@ -524,4 +543,34 @@ function sum(values) {
 
 function round1(value) {
   return Math.round(Number(value || 0) * 10) / 10;
+}
+
+function getCachedJson(key) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var raw = cache.get(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function setCachedJson(key, value, ttlSeconds) {
+  try {
+    CacheService
+      .getScriptCache()
+      .put(key, JSON.stringify(value), ttlSeconds);
+  } catch (error) {
+    // Ignore cache write failures.
+  }
+}
+
+function clearDashboardCaches() {
+  try {
+    CacheService
+      .getScriptCache()
+      .removeAll([LATEST_DATA_CACHE_KEY, CHART_HISTORY_CACHE_KEY]);
+  } catch (error) {
+    // Ignore cache clear failures.
+  }
 }
