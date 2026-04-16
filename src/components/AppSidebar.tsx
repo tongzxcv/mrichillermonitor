@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, Bell, Download, Settings, Monitor, Moon, Sun, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, Bell, Download, Settings, Moon, Sun, RefreshCw } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -32,8 +32,6 @@ import {
 interface AppSidebarProps {
   isDark: boolean;
   onToggleTheme: () => void;
-  tvMode: boolean;
-  onToggleTvMode: () => void;
   onOpenSettings: () => void;
   onOpenExport: () => void;
   onReboot: () => void | Promise<void>;
@@ -47,8 +45,6 @@ const navItems = [
 export function AppSidebar({
   isDark,
   onToggleTheme,
-  tvMode,
-  onToggleTvMode,
   onOpenSettings,
   onOpenExport,
   onReboot,
@@ -67,13 +63,6 @@ export function AppSidebar({
 
   const handleAction = (action: () => void | Promise<void>) => () => {
     void Promise.resolve(action()).finally(closeSidebar);
-  };
-
-  const handleTvModeChange = (checked: boolean) => {
-    if (checked !== tvMode) {
-      onToggleTvMode();
-    }
-    closeSidebar();
   };
 
   return (
@@ -144,14 +133,10 @@ export function AppSidebar({
                 {isDark ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
                 Dark Mode
               </Label>
-              <Switch id="dark-mode" checked={isDark} onCheckedChange={onToggleTheme} className="scale-90" />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="tv-mode" className="text-xs flex items-center gap-2 cursor-pointer">
-                <Monitor className="h-3.5 w-3.5" />
-                TV Mode
-              </Label>
-              <Switch id="tv-mode" checked={tvMode} onCheckedChange={handleTvModeChange} className="scale-90" />
+              <Switch id="dark-mode" checked={isDark} onCheckedChange={() => {
+                onToggleTheme();
+                closeSidebar();
+              }} className="scale-90" />
             </div>
           </SidebarFooter>
         )}

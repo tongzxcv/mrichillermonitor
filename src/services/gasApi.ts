@@ -17,9 +17,9 @@ type GasRequestOptions = {
 interface GasLatestResponse {
   sensors: SensorReading[];
   timestamp: string | null;
-  wifi1?: number;
-  wifi2?: number;
-  wifi3?: number;
+  wifi1?: number | string | null;
+  wifi2?: number | string | null;
+  wifi3?: number | string | null;
   error?: string;
 }
 
@@ -129,6 +129,12 @@ function delay(ms: number) {
   });
 }
 
+function toNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export async function fetchGasActionJsonp<T>(
   action: string,
   params: GasQueryParams = {},
@@ -159,9 +165,9 @@ export function initSensorHistoryFromChart(history: ChartHistoryPoint[]) {
 
   history.forEach((point) => {
     SENSOR_CONFIGS.forEach((config, index) => {
-      const val = point.vals[index];
-      if (val !== null && val !== undefined && !isNaN(val as number)) {
-        sensorHistory[config.id].push({ time: point.time, value: val as number });
+      const value = point.vals[index];
+      if (value !== null && value !== undefined && !Number.isNaN(value as number)) {
+        sensorHistory[config.id].push({ time: point.time, value: value as number });
       }
     });
   });
@@ -217,9 +223,9 @@ export async function fetchLatestData(
   return {
     sensors,
     timestamp: new Date().toISOString(),
-    wifi1: typeof data.wifi1 === 'number' ? data.wifi1 : null,
-    wifi2: typeof data.wifi2 === 'number' ? data.wifi2 : null,
-    wifi3: typeof data.wifi3 === 'number' ? data.wifi3 : null,
+    wifi1: toNullableNumber(data.wifi1),
+    wifi2: toNullableNumber(data.wifi2),
+    wifi3: toNullableNumber(data.wifi3),
   };
 }
 

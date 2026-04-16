@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/dialog";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useTheme } from "@/hooks/useTheme";
-import { useTvMode } from "@/hooks/useTvMode";
 import Index from "./pages/Index.tsx";
 import { useState, createContext, useContext, lazy, Suspense } from "react";
 import { getStoredRebootAuthToken, triggerRebootAll } from "@/services/gasApi";
@@ -33,8 +32,6 @@ interface ModalContextType {
   setSettingsOpen: (v: boolean) => void;
   exportOpen: boolean;
   setExportOpen: (v: boolean) => void;
-  tvMode: boolean;
-  toggleTvMode: () => void;
   rebootAll: () => Promise<void>;
 }
 
@@ -43,8 +40,6 @@ export const ModalContext = createContext<ModalContextType>({
   setSettingsOpen: () => {},
   exportOpen: false,
   setExportOpen: () => {},
-  tvMode: false,
-  toggleTvMode: () => {},
   rebootAll: async () => {},
 });
 
@@ -52,7 +47,6 @@ export const useModalContext = () => useContext(ModalContext);
 
 function AppLayout() {
   const { isDark, toggleTheme } = useTheme();
-  const { tvMode, toggleTvMode } = useTvMode();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [rebootOpen, setRebootOpen] = useState(false);
@@ -89,8 +83,6 @@ function AppLayout() {
         setSettingsOpen,
         exportOpen,
         setExportOpen,
-        tvMode,
-        toggleTvMode,
         rebootAll: openRebootDialog,
       }}
     >
@@ -99,8 +91,6 @@ function AppLayout() {
           <AppSidebar
             isDark={isDark}
             onToggleTheme={toggleTheme}
-            tvMode={tvMode}
-            onToggleTvMode={toggleTvMode}
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenExport={() => setExportOpen(true)}
             onReboot={openRebootDialog}

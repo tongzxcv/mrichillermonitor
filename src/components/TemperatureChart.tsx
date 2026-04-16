@@ -99,7 +99,7 @@ export default function TemperatureChart({
               />
               <YAxis
                 tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                unit="ยฐC"
+                unit="°C"
                 domain={yAxisDomain}
               />
               <Tooltip
